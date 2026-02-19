@@ -5,6 +5,8 @@ class AppStrings {
   // Main
   static const String mainQuestion = 'Bugün kendin için ne yaptın?';
   static const String writeButton = 'Yazdım';
+  static const String dayCompleted = 'Bugün kendindesin.';
+  static const String addToDay = 'Güne ekle';
   static const String entryPlaceholder = 'Bugün ne oldu...';
 
   // Days

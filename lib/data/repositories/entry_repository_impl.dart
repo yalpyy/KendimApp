@@ -12,6 +12,10 @@ class EntryRepositoryImpl implements EntryRepository {
       _datasource.createEntry(userId, text);
 
   @override
+  Future<EntryEntity> updateEntry(String entryId, String text) =>
+      _datasource.updateEntry(entryId, text);
+
+  @override
   Future<EntryEntity?> getTodayEntry(String userId) =>
       _datasource.getTodayEntry(userId);
 
