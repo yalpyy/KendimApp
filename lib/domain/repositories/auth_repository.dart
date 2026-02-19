@@ -8,14 +8,21 @@ abstract class AuthRepository {
   /// Signs in anonymously. Called on first launch.
   Future<UserEntity> signInAnonymously();
 
-  /// Links the anonymous account with Apple credentials.
-  Future<UserEntity> linkWithApple();
+  /// Creates a new email/password account.
+  Future<UserEntity> signUp(String email, String password, String displayName);
 
-  /// Links the anonymous account with Google credentials.
-  Future<UserEntity> linkWithGoogle();
+  /// Signs in with existing email/password.
+  Future<UserEntity> signIn(String email, String password);
 
-  /// Links the anonymous account with email/password.
-  Future<UserEntity> linkWithEmail(String email, String password);
+  /// Resends the email verification link.
+  Future<void> resendVerificationEmail();
+
+  /// Returns true if the user's email is verified.
+  Future<bool> isEmailVerified();
+
+  /// Migrates data from anonymous account to the new email account.
+  /// Calls the migrate-user-data edge function.
+  Future<void> migrateAnonymousData(String oldUserId, String newUserId);
 
   /// Signs out the current user.
   Future<void> signOut();

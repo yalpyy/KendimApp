@@ -8,8 +8,12 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   final ReflectionDatasource _datasource;
 
   @override
-  Future<void> generateReflection(String userId, DateTime weekStart) =>
-      _datasource.generateReflection(userId, weekStart);
+  Future<void> generateReflection(
+    String userId,
+    DateTime weekStart, {
+    bool isPremium = false,
+  }) =>
+      _datasource.generateReflection(userId, weekStart, isPremium: isPremium);
 
   @override
   Future<WeeklyReflectionEntity?> getReflection(

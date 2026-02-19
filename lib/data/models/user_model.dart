@@ -6,7 +6,9 @@ class UserModel extends UserEntity {
     required super.isPremium,
     required super.premiumMissTokens,
     super.email,
+    super.displayName,
     super.isAnonymous,
+    super.emailVerified,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -15,7 +17,9 @@ class UserModel extends UserEntity {
       isPremium: json['is_premium'] as bool? ?? false,
       premiumMissTokens: json['premium_miss_tokens'] as int? ?? 3,
       email: json['email'] as String?,
+      displayName: json['display_name'] as String?,
       isAnonymous: json['is_anonymous'] as bool? ?? true,
+      emailVerified: json['email_verified'] as bool? ?? false,
     );
   }
 
@@ -24,6 +28,7 @@ class UserModel extends UserEntity {
       'id': id,
       'is_premium': isPremium,
       'premium_miss_tokens': premiumMissTokens,
+      'display_name': displayName,
     };
   }
 }

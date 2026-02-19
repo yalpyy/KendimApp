@@ -1,4 +1,3 @@
-import 'package:kendin/core/utils/date_utils.dart';
 import 'package:kendin/domain/entities/entry_entity.dart';
 import 'package:kendin/domain/entities/weekly_reflection_entity.dart';
 import 'package:kendin/domain/repositories/entry_repository.dart';
@@ -53,7 +52,11 @@ class DemoReflectionRepository implements ReflectionRepository {
   ];
 
   @override
-  Future<void> generateReflection(String userId, DateTime weekStart) async {
+  Future<void> generateReflection(
+    String userId,
+    DateTime weekStart, {
+    bool isPremium = false,
+  }) async {
     final key = _reflectionKey(userId, weekStart);
     if (_reflections.containsKey(key)) return;
 

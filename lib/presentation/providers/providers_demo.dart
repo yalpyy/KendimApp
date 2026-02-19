@@ -135,7 +135,11 @@ class _DemoReflectionService implements ReflectionServiceBase {
     );
     if (existing != null) return true;
 
-    await _reflectionRepository.generateReflection(user.id, weekStart);
+    await _reflectionRepository.generateReflection(
+      user.id,
+      weekStart,
+      isPremium: user.isPremium,
+    );
     return true;
   }
 

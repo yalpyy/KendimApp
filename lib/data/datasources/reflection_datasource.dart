@@ -9,13 +9,18 @@ class ReflectionDatasource {
   final _client = SupabaseClientSetup.client;
 
   /// Invokes the edge function to generate a weekly reflection.
-  Future<void> generateReflection(String userId, DateTime weekStart) async {
+  Future<void> generateReflection(
+    String userId,
+    DateTime weekStart, {
+    bool isPremium = false,
+  }) async {
     try {
       final response = await _client.functions.invoke(
         'generate-reflection',
         body: {
           'user_id': userId,
           'week_start_date': weekStart.toIso8601String().split('T').first,
+          'is_premium': isPremium,
         },
       );
 

@@ -4,14 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kendin/core/constants/app_strings.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
+import 'package:kendin/presentation/screens/premium/premium_paywall_screen.dart';
 
 /// Displays the weekly reflection.
 ///
 /// Shows a loading state initially ("Haftanı bir araya getiriyorum.
 /// Hemen değil."), then polls until the reflection is ready.
 ///
-/// The reflection reads like a calm, observational letter — no
-/// advice, no motivation, no emojis.
+/// After the reflection is shown:
+/// - Free users see a premium CTA ("Bu haftada daha fazlası vardı")
+/// - Premium users see the archive button
 class ReflectionScreen extends ConsumerStatefulWidget {
   const ReflectionScreen({super.key});
 
@@ -64,7 +66,7 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider).valueOrNull;
-    final canArchive = user?.isPremium ?? false;
+    final isPremium = user?.isPremium ?? false;
 
     return Scaffold(
       body: SafeArea(
@@ -95,13 +97,18 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
                 )
               else if (_reflectionContent != null)
                 // Reflection content
-                Center(
-                  child: Text(
-                    _reflectionContent!,
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          height: 1.8,
-                        ),
-                    textAlign: TextAlign.center,
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Center(
+                      child: Text(
+                        _reflectionContent!,
+                        style:
+                            Theme.of(context).textTheme.displayLarge?.copyWith(
+                                  height: 1.8,
+                                ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
                 )
               else
@@ -114,22 +121,60 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
                   ),
                 ),
 
-              const Spacer(flex: 2),
+              if (!_isPolling && _reflectionContent != null) ...[
+                const SizedBox(height: AppSpacing.xl),
 
-              // Archive button (premium only, visible on Sunday)
-              if (_reflectionContent != null && canArchive)
-                Center(
-                  child: TextButton(
-                    onPressed: () => _archive(),
-                    child: const Text(AppStrings.archive),
+                // Premium CTA for free users
+                if (!isPremium) _buildPremiumCta(context),
+
+                // Archive button for premium users
+                if (isPremium)
+                  Center(
+                    child: TextButton(
+                      onPressed: () => _archive(),
+                      child: const Text(AppStrings.archive),
+                    ),
                   ),
-                ),
+              ],
 
               const Spacer(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPremiumCta(BuildContext context) {
+    return Column(
+      children: [
+        // Strong CTA text
+        Text(
+          AppStrings.premiumCtaStrong,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+          textAlign: TextAlign.center,
+        ),
+
+        const SizedBox(height: AppSpacing.md),
+
+        // CTA button
+        SizedBox(
+          width: double.infinity,
+          height: AppSpacing.buttonHeight,
+          child: ElevatedButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const PremiumPaywallScreen(),
+              ),
+            ),
+            child: Text(
+              '${AppStrings.premiumTitle} — ${AppStrings.premiumMonthlyPrice}',
+            ),
+          ),
+        ),
+      ],
     );
   }
 

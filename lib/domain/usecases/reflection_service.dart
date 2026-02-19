@@ -12,6 +12,8 @@ import 'package:kendin/domain/usecases/strike_manager.dart';
 /// 1. User taps "Bu haftayı gör" on Sunday.
 /// 2. Check strike eligibility.
 /// 3. Trigger edge function to generate reflection.
+///    - Free users get 5 sentences.
+///    - Premium users get 8-12 sentences.
 /// 4. Schedule local notification for 10 minutes later.
 /// 5. Reflection becomes visible after the delay.
 class ReflectionService implements ReflectionServiceBase {
@@ -39,8 +41,12 @@ class ReflectionService implements ReflectionServiceBase {
     );
     if (existing != null) return true;
 
-    // Trigger generation.
-    await _reflectionRepository.generateReflection(user.id, weekStart);
+    // Trigger generation with premium flag for sentence count.
+    await _reflectionRepository.generateReflection(
+      user.id,
+      weekStart,
+      isPremium: user.isPremium,
+    );
 
     // Schedule notification for 10 minutes from now.
     await _notificationService.scheduleReflectionReady();

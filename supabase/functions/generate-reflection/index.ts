@@ -4,6 +4,9 @@
 // Sunday reflection. Fetches the week's entries, generates
 // a calm observational reflection via OpenAI, and stores it.
 //
+// Free users: exactly 5 sentences.
+// Premium users: 8-12 sentences (deeper, more personal).
+//
 // Deploy: supabase functions deploy generate-reflection
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
@@ -21,7 +24,7 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { user_id, week_start_date } = await req.json()
+    const { user_id, week_start_date, is_premium } = await req.json()
 
     if (!user_id || !week_start_date) {
       return new Response(
@@ -29,6 +32,9 @@ serve(async (req: Request) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    // Use is_premium from request body, or fall back to DB check.
+    const isPremiumFromBody = is_premium === true
 
     // Initialize Supabase client with service role for full access.
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -61,14 +67,16 @@ serve(async (req: Request) => {
       )
     }
 
-    // Check if user is premium (for deeper reflection).
-    const { data: userData } = await supabase
-      .from('users')
-      .select('is_premium')
-      .eq('id', user_id)
-      .single()
-
-    const isPremium = userData?.is_premium ?? false
+    // Determine premium status: trust body param, fall back to DB.
+    let isPremium = isPremiumFromBody
+    if (!isPremiumFromBody) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('is_premium')
+        .eq('id', user_id)
+        .single()
+      isPremium = userData?.is_premium ?? false
+    }
 
     // Format entries for the prompt.
     const entriesText = entries
@@ -82,7 +90,11 @@ serve(async (req: Request) => {
       })
       .join('\n\n')
 
-    // Build the AI prompt.
+    // Build the AI prompt — sentence count varies by premium status.
+    const sentenceInstruction = isPremium
+      ? '8 ile 12 cümle arasında, daha derin ve kişisel bir haftalık yansıma yaz.'
+      : 'Tam olarak 5 cümlelik haftalık yansıma yaz.'
+
     const systemPrompt = `Sen sakin bir yansıma yazarısın.
 Tavsiye verme.
 Eylem önerme.
@@ -90,16 +102,17 @@ Yargılama.
 Motive etme.
 Türkçe yaz.
 Ton: yumuşak, gözlemsel.
-${isPremium ? 'Biraz daha derin ve kişisel bir gözlem yap.' : ''}
+${isPremium ? 'Biraz daha derin ve kişisel bir gözlem yap. Yazıların arasındaki bağlantıları fark et.' : ''}
 Bir mektup gibi hissettir.`
 
     const userPrompt = `İşte bu haftanın günlük yazıları:
 
 ${entriesText}
 
-3-4 cümlelik haftalık yansıma yaz.`
+${sentenceInstruction}`
 
     // Call OpenAI API.
+    const maxTokens = isPremium ? 600 : 300
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -112,7 +125,7 @@ ${entriesText}
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 300,
+        max_tokens: maxTokens,
         temperature: 0.7,
       }),
     })
