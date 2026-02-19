@@ -3,6 +3,7 @@ import 'package:kendin/domain/entities/user_entity.dart';
 import 'package:kendin/domain/entities/weekly_reflection_entity.dart';
 import 'package:kendin/domain/repositories/reflection_repository.dart';
 import 'package:kendin/domain/usecases/notification_service.dart';
+import 'package:kendin/domain/usecases/reflection_service_base.dart';
 import 'package:kendin/domain/usecases/strike_manager.dart';
 
 /// Orchestrates the Sunday reflection flow.
@@ -11,9 +12,11 @@ import 'package:kendin/domain/usecases/strike_manager.dart';
 /// 1. User taps "Bu haftayı gör" on Sunday.
 /// 2. Check strike eligibility.
 /// 3. Trigger edge function to generate reflection.
+///    - Free users get 5 sentences.
+///    - Premium users get 8-12 sentences.
 /// 4. Schedule local notification for 10 minutes later.
 /// 5. Reflection becomes visible after the delay.
-class ReflectionService {
+class ReflectionService implements ReflectionServiceBase {
   ReflectionService(
     this._reflectionRepository,
     this._strikeManager,
@@ -24,10 +27,7 @@ class ReflectionService {
   final StrikeManager _strikeManager;
   final NotificationService _notificationService;
 
-  /// Starts the weekly reflection generation.
-  ///
-  /// Returns true if generation was triggered successfully.
-  /// Throws if user is not eligible.
+  @override
   Future<bool> triggerReflection(UserEntity user) async {
     final canAccess = await _strikeManager.canAccessReflection(user);
     if (!canAccess) return false;
@@ -41,8 +41,12 @@ class ReflectionService {
     );
     if (existing != null) return true;
 
-    // Trigger generation.
-    await _reflectionRepository.generateReflection(user.id, weekStart);
+    // Trigger generation with premium flag for sentence count.
+    await _reflectionRepository.generateReflection(
+      user.id,
+      weekStart,
+      isPremium: user.isPremium,
+    );
 
     // Schedule notification for 10 minutes from now.
     await _notificationService.scheduleReflectionReady();
@@ -50,28 +54,26 @@ class ReflectionService {
     return true;
   }
 
-  /// Returns the current week's reflection if available.
+  @override
   Future<WeeklyReflectionEntity?> getCurrentReflection(String userId) {
     final weekStart = KendinDateUtils.weekStart(DateTime.now());
     return _reflectionRepository.getReflection(userId, weekStart);
   }
 
-  /// Archives a reflection (premium only).
+  @override
   Future<void> archiveReflection(String reflectionId) {
     return _reflectionRepository.archiveReflection(reflectionId);
   }
 
-  /// Returns all archived reflections.
+  @override
   Future<List<WeeklyReflectionEntity>> getArchivedReflections(String userId) {
     return _reflectionRepository.getArchivedReflections(userId);
   }
 
-  /// Returns true if today is Sunday and the user should see the
-  /// reflection UI.
+  @override
   bool isSundayMode() => KendinDateUtils.isSunday(DateTime.now());
 
-  /// Returns true if the reflection is visible (either already
-  /// generated, or enough time has passed since triggering).
+  @override
   Future<bool> isReflectionReady(String userId) async {
     final reflection = await getCurrentReflection(userId);
     return reflection != null;

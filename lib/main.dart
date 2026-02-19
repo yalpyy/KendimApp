@@ -3,41 +3,37 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kendin/core/theme/app_theme.dart';
-import 'package:kendin/data/datasources/supabase_client_setup.dart';
-import 'package:kendin/domain/usecases/notification_service.dart';
-import 'package:kendin/domain/usecases/premium_service.dart';
 import 'package:kendin/presentation/screens/home/home_screen.dart';
+
+// Conditional import: production init on native, demo (no-op) on web.
+import 'package:kendin/app_init/app_init_production.dart'
+    if (dart.library.html) 'package:kendin/app_init/app_init_demo.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Lock to portrait.
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
 
-  // Initialize Supabase.
-  await SupabaseClientSetup.initialize();
-
-  // Initialize notifications.
-  final notificationService = NotificationService();
-  await notificationService.initialize();
-
-  // Initialize in-app purchases.
-  final premiumService = PremiumService();
-  await premiumService.initialize();
+  // Initializes Supabase + notifications + IAP in production,
+  // or does nothing in demo mode.
+  final disposer = await initializeApp();
 
   runApp(
     ProviderScope(
-      child: KendinApp(premiumService: premiumService),
+      child: KendinApp(onDispose: disposer),
     ),
   );
 }
 
-class KendinApp extends StatefulWidget {
-  const KendinApp({super.key, required this.premiumService});
+/// Callback to clean up resources when the app is disposed.
+typedef AppDisposer = void Function();
 
-  final PremiumService premiumService;
+class KendinApp extends StatefulWidget {
+  const KendinApp({super.key, required this.onDispose});
+
+  final AppDisposer onDispose;
 
   @override
   State<KendinApp> createState() => _KendinAppState();
@@ -46,7 +42,7 @@ class KendinApp extends StatefulWidget {
 class _KendinAppState extends State<KendinApp> {
   @override
   void dispose() {
-    widget.premiumService.dispose();
+    widget.onDispose();
     super.dispose();
   }
 

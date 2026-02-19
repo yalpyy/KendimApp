@@ -4,15 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kendin/core/constants/app_strings.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
-import 'package:kendin/presentation/screens/premium/premium_screen.dart';
-import 'package:kendin/presentation/screens/settings/link_account_sheet.dart';
+import 'package:kendin/presentation/screens/auth/account_gate_screen.dart';
+import 'package:kendin/presentation/screens/premium/premium_paywall_screen.dart';
 
 /// Settings screen.
 ///
 /// Provides:
-/// - Account linking ("Verilerimi güvenceye al")
-/// - Premium subscription ("Derinlik")
+/// - Account creation (anonymous users → AccountGateScreen)
+/// - Premium subscription ("Derinlik" → PremiumPaywallScreen)
 /// - Restore purchases
+/// - Sign out (for non-anonymous users)
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -45,7 +46,6 @@ class SettingsScreen extends ConsumerWidget {
 
               const SizedBox(height: AppSpacing.xxl),
 
-              // Account linking
               userAsync.when(
                 data: (user) {
                   if (user == null) return const SizedBox.shrink();
@@ -53,11 +53,15 @@ class SettingsScreen extends ConsumerWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Link account (only for anonymous users)
+                      // Create account (only for anonymous users)
                       if (user.isAnonymous) ...[
                         _SettingsTile(
-                          title: AppStrings.secureData,
-                          onTap: () => _showLinkSheet(context),
+                          title: AppStrings.createAccount,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AccountGateScreen(),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.md),
                         const Divider(),
@@ -68,7 +72,11 @@ class SettingsScreen extends ConsumerWidget {
                       if (!user.isPremium) ...[
                         _SettingsTile(
                           title: AppStrings.premium,
-                          onTap: () => _openPremium(context),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const PremiumPaywallScreen(),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.md),
                         const Divider(),
@@ -91,6 +99,17 @@ class SettingsScreen extends ConsumerWidget {
                         title: AppStrings.restorePurchase,
                         onTap: () => _restorePurchases(context, ref),
                       ),
+
+                      // Sign out (only for non-anonymous users)
+                      if (!user.isAnonymous) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        const Divider(),
+                        const SizedBox(height: AppSpacing.md),
+                        _SettingsTile(
+                          title: AppStrings.signOut,
+                          onTap: () => _signOut(context, ref),
+                        ),
+                      ],
                     ],
                   );
                 },
@@ -109,29 +128,28 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showLinkSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.cardRadius),
-        ),
-      ),
-      builder: (_) => const LinkAccountSheet(),
-    );
-  }
-
-  void _openPremium(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PremiumScreen()),
-    );
-  }
-
   Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
     try {
       await ref.read(premiumServiceProvider).restorePurchases();
+      await ref.read(currentUserProvider.notifier).refresh();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(AppStrings.genericError),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(authServiceProvider).signOut();
+      // Re-initialize with anonymous user.
+      final user = await ref.read(authServiceProvider).initialize();
+      ref.read(currentUserProvider.notifier).setUser(user);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

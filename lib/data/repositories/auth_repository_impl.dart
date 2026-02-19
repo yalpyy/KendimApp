@@ -14,14 +14,23 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<UserEntity> signInAnonymously() => _datasource.signInAnonymously();
 
   @override
-  Future<UserEntity> linkWithApple() => _datasource.linkWithApple();
+  Future<UserEntity> signUp(String email, String password, String displayName) =>
+      _datasource.signUp(email, password, displayName);
 
   @override
-  Future<UserEntity> linkWithGoogle() => _datasource.linkWithGoogle();
+  Future<UserEntity> signIn(String email, String password) =>
+      _datasource.signIn(email, password);
 
   @override
-  Future<UserEntity> linkWithEmail(String email, String password) =>
-      _datasource.linkWithEmail(email, password);
+  Future<void> resendVerificationEmail() =>
+      _datasource.resendVerificationEmail();
+
+  @override
+  Future<bool> isEmailVerified() => _datasource.isEmailVerified();
+
+  @override
+  Future<void> migrateAnonymousData(String oldUserId, String newUserId) =>
+      _datasource.migrateAnonymousData(oldUserId, newUserId);
 
   @override
   Future<void> signOut() => _datasource.signOut();

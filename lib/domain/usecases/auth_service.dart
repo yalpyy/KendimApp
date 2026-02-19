@@ -3,8 +3,8 @@ import 'package:kendin/domain/repositories/auth_repository.dart';
 
 /// High-level auth operations.
 ///
-/// Ensures anonymous auth on first launch, and account linking
-/// for data persistence and premium purchases.
+/// Supports anonymous auth on first launch and email/password
+/// account creation for data persistence and premium purchases.
 class AuthService {
   AuthService(this._repository);
 
@@ -19,17 +19,33 @@ class AuthService {
 
   Future<UserEntity?> getCurrentUser() => _repository.getCurrentUser();
 
-  Future<UserEntity> linkWithApple() => _repository.linkWithApple();
+  /// Creates a new email/password account.
+  Future<UserEntity> signUp(
+    String email,
+    String password,
+    String displayName,
+  ) =>
+      _repository.signUp(email, password, displayName);
 
-  Future<UserEntity> linkWithGoogle() => _repository.linkWithGoogle();
+  /// Signs in with existing email/password.
+  Future<UserEntity> signIn(String email, String password) =>
+      _repository.signIn(email, password);
 
-  Future<UserEntity> linkWithEmail(String email, String password) =>
-      _repository.linkWithEmail(email, password);
+  /// Resends the email verification link.
+  Future<void> resendVerificationEmail() =>
+      _repository.resendVerificationEmail();
+
+  /// Checks if email is verified.
+  Future<bool> isEmailVerified() => _repository.isEmailVerified();
+
+  /// Migrates anonymous user data to the new email account.
+  Future<void> migrateAnonymousData(String oldUserId, String newUserId) =>
+      _repository.migrateAnonymousData(oldUserId, newUserId);
 
   Future<void> signOut() => _repository.signOut();
 
   Stream<UserEntity?> get authStateChanges => _repository.authStateChanges;
 
-  /// Returns true if the user has linked a real identity.
-  bool isAccountLinked(UserEntity user) => !user.isAnonymous;
+  /// Returns true if the user has a real email account (not anonymous).
+  bool hasAccount(UserEntity user) => !user.isAnonymous;
 }

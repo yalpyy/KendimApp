@@ -231,7 +231,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      await ref.read(entryDatasourceProvider).createEntry(user.id, text);
+      await ref.read(entryRepositoryProvider).createEntry(user.id, text);
       setState(() {
         _hasWrittenToday = true;
         _isSubmitting = false;
