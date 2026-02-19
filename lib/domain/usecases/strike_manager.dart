@@ -1,9 +1,15 @@
 import 'package:kendin/core/constants/app_constants.dart';
 import 'package:kendin/core/utils/date_utils.dart';
-import 'package:kendin/data/datasources/supabase_client_setup.dart';
 import 'package:kendin/domain/entities/entry_entity.dart';
 import 'package:kendin/domain/entities/user_entity.dart';
 import 'package:kendin/domain/repositories/entry_repository.dart';
+
+/// Callback to persist the updated miss token count.
+/// Injected by the provider — Supabase in production, no-op in demo.
+typedef UpdateMissTokens = Future<void> Function(
+  String userId,
+  int newTokenCount,
+);
 
 /// Strike state for the current week.
 class StrikeState {
@@ -37,9 +43,11 @@ class StrikeState {
 /// Users must complete all 6 days to unlock the weekly reflection.
 /// Premium users can use miss tokens to fill gaps.
 class StrikeManager {
-  StrikeManager(this._entryRepository);
+  StrikeManager(this._entryRepository, {UpdateMissTokens? updateMissTokens})
+      : _updateMissTokens = updateMissTokens;
 
   final EntryRepository _entryRepository;
+  final UpdateMissTokens? _updateMissTokens;
 
   /// Computes the strike state for the current week.
   Future<StrikeState> getStrikeState(String userId) async {
@@ -74,13 +82,9 @@ class StrikeManager {
 
     final newTokenCount = user.premiumMissTokens - tokensNeeded;
 
-    await SupabaseClientSetup.client
-        .from('users')
-        .update({
-          'premium_miss_tokens': newTokenCount,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
-        .eq('id', user.id);
+    if (_updateMissTokens != null) {
+      await _updateMissTokens!(user.id, newTokenCount);
+    }
 
     return newTokenCount;
   }
