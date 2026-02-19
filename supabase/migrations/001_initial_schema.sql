@@ -22,8 +22,11 @@ create table if not exists public.entries (
 );
 
 -- Ensure one entry per user per calendar day.
+-- Use date column instead of casting timestamptz (which is not IMMUTABLE).
+alter table public.entries add column entry_date date not null default current_date;
+
 create unique index if not exists idx_entries_user_day
-  on public.entries (user_id, (created_at::date));
+  on public.entries (user_id, entry_date);
 
 -- Index for week queries.
 create index if not exists idx_entries_user_created
