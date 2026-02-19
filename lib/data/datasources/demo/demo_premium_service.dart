@@ -9,7 +9,10 @@ class DemoPremiumService {
 
   Stream<bool> get premiumStream => _premiumController.stream;
 
+  List<dynamic> get products => [];
+
   Future<void> initialize() async {}
+  Future<void> purchase(dynamic product) async {}
   Future<void> restorePurchases() async {}
 
   void dispose() {
