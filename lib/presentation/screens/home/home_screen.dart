@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kendin/core/constants/app_strings.dart';
+import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/core/utils/date_utils.dart';
 import 'package:kendin/domain/usecases/strike_manager.dart';
@@ -196,14 +197,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     BuildContext context,
     AsyncValue<StrikeState?> strikeAsync,
   ) {
+    final l10n = AppLocalizations.of(context);
+    final now = DateTime.now();
+    final isSaturday = now.weekday == DateTime.saturday;
+    final strike = strikeAsync.valueOrNull;
+    final isSaturdayComplete =
+        isSaturday && strike != null && strike.completedDays >= 6;
+
+    debugPrint(
+      '[HomeScreen] Completed: saturday=$isSaturday, '
+      'strike=${strike?.completedDays}, saturdayComplete=$isSaturdayComplete',
+    );
+
     return Column(
       children: [
-        // "Bugün kendindesin."
-        Text(
-          AppStrings.dayCompleted,
-          style: Theme.of(context).textTheme.displayLarge,
-          textAlign: TextAlign.center,
-        ),
+        // Saturday full-week message or normal completed message.
+        if (isSaturdayComplete) ...[
+          Text(
+            l10n.saturdayCompletedTitle,
+            style: Theme.of(context).textTheme.displayLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            l10n.saturdayCompletedSubtitle,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+        ] else
+          Text(
+            l10n.dayCompletedMessage,
+            style: Theme.of(context).textTheme.displayLarge,
+            textAlign: TextAlign.center,
+          ),
+
         const SizedBox(height: AppSpacing.lg),
 
         // Strike dots (today's dot is filled)
