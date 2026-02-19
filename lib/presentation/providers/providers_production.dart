@@ -10,6 +10,7 @@ import 'package:kendin/domain/entities/user_entity.dart';
 import 'package:kendin/domain/repositories/entry_repository.dart';
 import 'package:kendin/domain/repositories/reflection_repository.dart';
 import 'package:kendin/domain/usecases/auth_service.dart';
+import 'package:kendin/domain/usecases/entry_service.dart';
 import 'package:kendin/domain/usecases/notification_service.dart';
 import 'package:kendin/domain/usecases/premium_service.dart';
 import 'package:kendin/domain/usecases/reflection_service.dart';
@@ -41,6 +42,10 @@ final reflectionRepositoryProvider = Provider<ReflectionRepository>(
 
 final authServiceProvider = Provider(
   (ref) => AuthService(ref.read(authRepositoryProvider)),
+);
+
+final entryServiceProvider = Provider(
+  (ref) => EntryService(ref.read(entryRepositoryProvider)),
 );
 
 final notificationServiceProvider = Provider((_) => NotificationService());

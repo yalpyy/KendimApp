@@ -20,6 +20,21 @@ class EntryDatasource {
     }
   }
 
+  /// Updates an existing entry's text by ID.
+  Future<EntryModel> updateEntry(String entryId, String text) async {
+    try {
+      final data = await _client
+          .from('entries')
+          .update({'text': text})
+          .eq('id', entryId)
+          .select()
+          .single();
+      return EntryModel.fromJson(data);
+    } catch (e) {
+      throw EntryException('Failed to update entry: $e');
+    }
+  }
+
   /// Returns today's entry for the user, or null.
   Future<EntryModel?> getTodayEntry(String userId) async {
     try {

@@ -6,9 +6,16 @@ class AppConstants {
   static const String appName = 'Kendin';
   static const String appSubtitle = 'Bugün kendin için ne yaptın?';
 
-  // Supabase — replace with your actual values
-  static const String supabaseUrl = 'YOUR_SUPABASE_URL';
-  static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+  // Supabase — injected at build time via --dart-define.
+  // Never commit actual values to the repository.
+  static const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: '',
+  );
+  static const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
 
   // Strike system
   static const int writingDaysPerWeek = 6; // Mon–Sat

@@ -5,6 +5,9 @@ abstract class EntryRepository {
   /// Creates a new entry for today.
   Future<EntryEntity> createEntry(String userId, String text);
 
+  /// Updates an existing entry's text.
+  Future<EntryEntity> updateEntry(String entryId, String text);
+
   /// Returns today's entry if it exists.
   Future<EntryEntity?> getTodayEntry(String userId);
 

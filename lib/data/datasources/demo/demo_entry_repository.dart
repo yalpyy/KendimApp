@@ -24,6 +24,21 @@ class DemoEntryRepository implements EntryRepository {
   }
 
   @override
+  Future<EntryEntity> updateEntry(String entryId, String text) async {
+    final index = _entries.indexWhere((e) => e.id == entryId);
+    if (index == -1) throw Exception('Entry not found: $entryId');
+    final old = _entries[index];
+    final updated = EntryEntity(
+      id: old.id,
+      userId: old.userId,
+      text: text,
+      createdAt: old.createdAt,
+    );
+    _entries[index] = updated;
+    return updated;
+  }
+
+  @override
   Future<EntryEntity?> getTodayEntry(String userId) async {
     final now = DateTime.now();
     for (final entry in _entries.reversed) {
