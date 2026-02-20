@@ -94,7 +94,8 @@ class _LanguageOption extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.cardPadding),
         decoration: BoxDecoration(
           color: isSelected
-              ? theme.colorScheme.primary.withValues(alpha: 0.1)
+              // ignore: deprecated_member_use
+              ? theme.colorScheme.primary.withOpacity(0.1)
               : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           border: isSelected
