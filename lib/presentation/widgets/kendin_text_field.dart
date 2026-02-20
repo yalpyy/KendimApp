@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:kendin/core/constants/app_strings.dart';
+import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 
 /// Multi-line text field for daily entries.
@@ -30,7 +30,7 @@ class KendinTextField extends StatelessWidget {
       keyboardType: TextInputType.multiline,
       style: Theme.of(context).textTheme.bodyLarge,
       decoration: InputDecoration(
-        hintText: AppStrings.entryPlaceholder,
+        hintText: AppLocalizations.of(context).entryPlaceholder,
         contentPadding: const EdgeInsets.all(AppSpacing.md),
       ),
       onTapOutside: (_) => FocusScope.of(context).unfocus(),

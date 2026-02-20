@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kendin/core/constants/app_strings.dart';
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/core/utils/date_utils.dart';
 import 'package:kendin/domain/usecases/strike_manager.dart';
 import 'package:kendin/presentation/providers/providers.dart';
+import 'package:kendin/presentation/screens/menu/menu_screen.dart';
 import 'package:kendin/presentation/screens/reflection/reflection_screen.dart';
-import 'package:kendin/presentation/screens/settings/settings_screen.dart';
 import 'package:kendin/presentation/widgets/date_header.dart';
 import 'package:kendin/presentation/widgets/kendin_button.dart';
 import 'package:kendin/presentation/widgets/kendin_text_field.dart';
@@ -23,7 +22,7 @@ enum DayState {
 /// The single main screen of Kendin.
 ///
 /// On load: checks if today's entry exists.
-///   - If exists → completed state ("Bugün kendindesin." + strike dots + "Güne ekle")
+///   - If exists → completed state
 ///   - If not   → editing state (question + text field + "Yazdım")
 ///
 /// On Sunday: shows "Bu haftayı gör" instead.
@@ -62,6 +61,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final strikeAsync = ref.watch(strikeStateProvider);
     ref.watch(todayEntryProvider);
     final isSunday = KendinDateUtils.isSunday(DateTime.now());
@@ -81,72 +81,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.screenHorizontal,
-          ),
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
           child: Column(
             children: [
-              // Top bar
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const SizedBox(width: 40), // Balance the icon
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.more_horiz),
-                    onPressed: () => _openSettings(context),
-                    tooltip: AppStrings.settings,
-                  ),
-                ],
+              // Top bar — fixed
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenHorizontal,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(width: 40),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.more_horiz),
+                          onPressed: () => _openMenu(context),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
 
-              const Spacer(flex: 2),
+              // Scrollable content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenHorizontal,
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: AppSpacing.xxl),
 
-              // Date
-              const DateHeader(),
-              const SizedBox(height: AppSpacing.sm),
+                      // Date
+                      const DateHeader(),
+                      const SizedBox(height: AppSpacing.sm),
 
-              // ── Sunday flow ──
-              if (isSunday) ...[
-                _buildStrikeRow(strikeAsync),
-                const SizedBox(height: AppSpacing.xxl),
-                Text(
-                  AppStrings.seeThisWeek,
-                  style: Theme.of(context).textTheme.displayLarge,
-                  textAlign: TextAlign.center,
+                      // ── Sunday flow ──
+                      if (isSunday) ...[
+                        _buildStrikeRow(strikeAsync),
+                        const SizedBox(height: AppSpacing.xxl),
+                        Text(
+                          l10n.seeThisWeek,
+                          style: Theme.of(context).textTheme.displayLarge,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+                        _buildSundayContent(context),
+                      ]
+
+                      // ── Loading (DayState not yet resolved) ──
+                      else if (_dayState == null) ...[
+                        const SizedBox(height: AppSpacing.xxl),
+                        const CircularProgressIndicator(),
+                      ]
+
+                      // ── Completed state ──
+                      else if (_dayState == DayState.completed) ...[
+                        const SizedBox(height: AppSpacing.xxl),
+                        _buildCompletedContent(context, strikeAsync),
+                      ]
+
+                      // ── Editing state ──
+                      else ...[
+                        _buildStrikeRow(strikeAsync),
+                        const SizedBox(height: AppSpacing.xxl),
+                        Text(
+                          l10n.mainQuestion,
+                          style: Theme.of(context).textTheme.displayLarge,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+                        _buildEditingContent(context),
+                      ],
+
+                      const SizedBox(height: AppSpacing.xxl),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                _buildSundayContent(context),
-              ]
-
-              // ── Loading (DayState not yet resolved) ──
-              else if (_dayState == null) ...[
-                const SizedBox(height: AppSpacing.xxl),
-                const CircularProgressIndicator(),
-              ]
-
-              // ── Completed state ──
-              else if (_dayState == DayState.completed) ...[
-                const SizedBox(height: AppSpacing.xxl),
-                _buildCompletedContent(context, strikeAsync),
-              ]
-
-              // ── Editing state ──
-              else ...[
-                _buildStrikeRow(strikeAsync),
-                const SizedBox(height: AppSpacing.xxl),
-                Text(
-                  AppStrings.mainQuestion,
-                  style: Theme.of(context).textTheme.displayLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                _buildEditingContent(context),
-              ],
-
-              const Spacer(flex: 3),
+              ),
             ],
           ),
         ),
@@ -173,15 +191,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // ─── Editing State ─────────────────────────────────
 
   Widget _buildEditingContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
-        KendinTextField(
-          controller: _textController,
-          enabled: true,
+        SizedBox(
+          height: 180,
+          child: KendinTextField(
+            controller: _textController,
+            enabled: true,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         KendinButton(
-          label: AppStrings.writeButton,
+          label: l10n.writeButton,
           isLoading: _isSubmitting,
           onPressed: _textController.text.trim().isEmpty
               ? null
@@ -211,7 +233,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Column(
       children: [
-        // Saturday full-week message or normal completed message.
         if (isSaturdayComplete) ...[
           Text(
             l10n.saturdayCompletedTitle,
@@ -233,13 +254,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         const SizedBox(height: AppSpacing.lg),
 
-        // Strike dots (today's dot is filled)
         _buildStrikeRow(strikeAsync),
         const SizedBox(height: AppSpacing.lg),
 
-        // "Güne ekle" button
         KendinButton(
-          label: AppStrings.addToDay,
+          label: l10n.addToDay,
           onPressed: () => _onGuneEkle(),
         ),
       ],
@@ -249,6 +268,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // ─── Sunday State ──────────────────────────────────
 
   Widget _buildSundayContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final userAsync = ref.watch(currentUserProvider);
     final strikeAsync = ref.watch(strikeStateProvider);
 
@@ -258,42 +278,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
         return Column(
           children: [
-            // Show strike summary
             Text(
               '${strike.completedDays}/${strike.totalDays}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // If week is complete or user can use tokens
             KendinButton(
-              label: AppStrings.seeThisWeek,
+              label: l10n.seeThisWeek,
               isLoading: _isSubmitting,
               onPressed: () => _triggerReflection(context, strike),
             ),
 
-            // If not complete and premium, show miss token option
             if (!strike.isWeekComplete)
               userAsync.when(
                 data: (user) {
                   if (user == null || !user.isPremium) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.md),
-                      child: Text(
-                        AppStrings.reflectionLocked,
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    );
+                    return const SizedBox.shrink();
                   }
                   return Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.md),
                     child: TextButton(
                       onPressed: () => _useMissTokens(),
                       child: Text(
-                        '${AppStrings.completeMissingDay} '
-                        '(${AppStrings.missTokensRemaining}: '
-                        '${user.premiumMissTokens})',
+                        '${user.premiumMissTokens}',
                       ),
                     ),
                   );
@@ -306,7 +314,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       },
       loading: () => const CircularProgressIndicator(),
       error: (_, __) => Text(
-        AppStrings.genericError,
+        l10n.genericError,
         style: Theme.of(context).textTheme.bodySmall,
       ),
     );
@@ -314,7 +322,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // ─── Actions ───────────────────────────────────────
 
-  /// "Yazdım" — save or update today's entry, switch to completed.
   Future<void> _submitEntry() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
@@ -337,7 +344,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       });
       debugPrint('[HomeScreen] State → completed');
 
-      // Refresh strike state and today entry.
       ref.invalidate(strikeStateProvider);
       ref.invalidate(todayEntryProvider);
     } catch (e) {
@@ -346,7 +352,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppStrings.genericError),
+            content: Text(AppLocalizations.of(context).genericError),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -354,7 +360,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  /// "Güne ekle" — fetch today's entry, put text back, switch to editing.
   Future<void> _onGuneEkle() async {
     final user = ref.read(currentUserProvider).valueOrNull;
     if (user == null) return;
@@ -380,7 +385,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppStrings.genericError),
+            content: Text(AppLocalizations.of(context).genericError),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -395,14 +400,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final user = ref.read(currentUserProvider).valueOrNull;
     if (user == null) return;
 
-    // Check eligibility.
     if (!strike.isWeekComplete && !user.isPremium) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppStrings.reflectionLocked),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
       return;
     }
 
@@ -426,7 +424,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppStrings.genericError),
+            content: Text(AppLocalizations.of(context).genericError),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -449,7 +447,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppStrings.genericError),
+            content: Text(AppLocalizations.of(context).genericError),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -457,9 +455,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _openSettings(BuildContext context) {
+  void _openMenu(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+      MaterialPageRoute(builder: (_) => const MenuScreen()),
     );
   }
 }

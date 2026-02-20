@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kendin/core/constants/app_strings.dart';
+import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
-import 'package:kendin/presentation/screens/auth/account_gate_screen.dart';
+import 'package:kendin/presentation/screens/auth/login_screen.dart';
 import 'package:kendin/presentation/screens/auth/verify_email_screen.dart';
 
 /// Premium paywall screen ("Derinlik").
 ///
-/// Shows 49₺/month and 299₺/year options.
-/// Requires a verified email account to purchase:
-/// - Anonymous → AccountGateScreen
+/// Shows advantages, 49₺/month and 299₺/year options.
+/// Auth gates:
+/// - Anonymous → LoginScreen
 /// - Unverified email → VerifyEmailScreen
-/// - Verified → proceed to purchase
+/// - Verified → purchase
 class PremiumPaywallScreen extends ConsumerStatefulWidget {
   const PremiumPaywallScreen({super.key});
 
@@ -27,6 +27,8 @@ class _PremiumPaywallScreenState extends ConsumerState<PremiumPaywallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final user = ref.watch(currentUserProvider).valueOrNull;
     final isAnonymous = user?.isAnonymous ?? true;
     final emailVerified = user?.emailVerified ?? false;
@@ -51,8 +53,8 @@ class _PremiumPaywallScreenState extends ConsumerState<PremiumPaywallScreen> {
               // Title
               Center(
                 child: Text(
-                  AppStrings.premiumTitle,
-                  style: Theme.of(context).textTheme.displayLarge,
+                  l10n.premiumTitle,
+                  style: theme.textTheme.displayLarge,
                 ),
               ),
 
@@ -61,46 +63,45 @@ class _PremiumPaywallScreenState extends ConsumerState<PremiumPaywallScreen> {
               // Benefits
               Center(
                 child: Text(
-                  AppStrings.premiumSubtitle,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  l10n.premiumSubtitle,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
 
               const SizedBox(height: AppSpacing.xxl),
 
-              // Account gate warning for anonymous users
+              // Auth gate: anonymous
               if (isAnonymous)
-                _buildAccountGateWarning(context)
-              // Email verification warning
+                _buildAuthGate(context, l10n)
+              // Auth gate: email not verified
               else if (!emailVerified)
-                _buildVerifyEmailWarning(context)
+                _buildVerifyGate(context, l10n)
               // Purchase options
               else ...[
-                // Monthly plan
                 _PlanButton(
-                  label: '${AppStrings.premiumMonthly} — ${AppStrings.premiumMonthlyPrice}',
+                  label: l10n.premiumMonthly,
                   isLoading: _isLoading,
                   onPressed: () => _purchase('monthly'),
                 ),
 
                 const SizedBox(height: AppSpacing.sm),
 
-                // Yearly plan
                 _PlanButton(
-                  label: '${AppStrings.premiumYearly} — ${AppStrings.premiumYearlyPrice}',
-                  subtitle: AppStrings.premiumYearlySave,
+                  label: l10n.premiumYearly,
+                  subtitle: l10n.premiumYearlySave,
                   isLoading: _isLoading,
                   onPressed: () => _purchase('yearly'),
                 ),
 
                 const SizedBox(height: AppSpacing.xl),
 
-                // Restore purchases
                 Center(
                   child: TextButton(
                     onPressed: () => _restorePurchases(),
-                    child: const Text(AppStrings.restorePurchase),
+                    child: Text(l10n.premiumRestore),
                   ),
                 ),
               ],
@@ -113,19 +114,20 @@ class _PremiumPaywallScreenState extends ConsumerState<PremiumPaywallScreen> {
     );
   }
 
-  Widget _buildAccountGateWarning(BuildContext context) {
+  Widget _buildAuthGate(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           ),
           child: Text(
-            AppStrings.accountGateSubtitle,
-            style: Theme.of(context).textTheme.bodySmall,
+            l10n.menuAccountSubtitleAnon,
+            style: theme.textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),
         ),
@@ -135,30 +137,29 @@ class _PremiumPaywallScreenState extends ConsumerState<PremiumPaywallScreen> {
           height: AppSpacing.buttonHeight,
           child: ElevatedButton(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const AccountGateScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
             ),
-            child: const Text(AppStrings.createAccount),
+            child: Text(l10n.createAccount),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildVerifyEmailWarning(BuildContext context) {
+  Widget _buildVerifyGate(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     return Column(
       children: [
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           ),
           child: Text(
-            AppStrings.verifyEmailFirst,
-            style: Theme.of(context).textTheme.bodySmall,
+            l10n.verifyFirst,
+            style: theme.textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),
         ),
@@ -168,11 +169,9 @@ class _PremiumPaywallScreenState extends ConsumerState<PremiumPaywallScreen> {
           height: AppSpacing.buttonHeight,
           child: ElevatedButton(
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const VerifyEmailScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
             ),
-            child: const Text(AppStrings.verifyEmailTitle),
+            child: Text(l10n.verifyEmailTitle),
           ),
         ),
       ],
@@ -183,13 +182,12 @@ class _PremiumPaywallScreenState extends ConsumerState<PremiumPaywallScreen> {
     setState(() => _isLoading = true);
     try {
       await ref.read(premiumServiceProvider).purchase(plan);
-      // Refresh user state after purchase.
       await ref.read(currentUserProvider.notifier).refresh();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.genericError),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).genericError),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -206,8 +204,8 @@ class _PremiumPaywallScreenState extends ConsumerState<PremiumPaywallScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.genericError),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).genericError),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -231,15 +229,14 @@ class _PlanButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SizedBox(
       width: double.infinity,
       height: AppSpacing.buttonHeight,
       child: OutlinedButton(
         onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color: Theme.of(context).colorScheme.outline,
-          ),
+          side: BorderSide(color: theme.colorScheme.outline),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
           ),
@@ -252,9 +249,9 @@ class _PlanButton extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Text(
                 subtitle!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ],
           ],

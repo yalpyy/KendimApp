@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 
-import 'package:kendin/core/constants/app_strings.dart';
+import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/screens/auth/login_screen.dart';
-import 'package:kendin/presentation/screens/auth/signup_screen.dart';
 import 'package:kendin/presentation/widgets/kendin_button.dart';
 
 /// Gate screen shown when an anonymous user tries to access
 /// premium features or wants to secure their data.
 ///
-/// Two options:
-/// - Create a new account (→ SignupScreen)
-/// - Already have an account (→ LoginScreen)
+/// Navigates to LoginScreen (which has sign-in/sign-up toggle).
 class AccountGateScreen extends StatelessWidget {
   const AccountGateScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -34,45 +33,36 @@ class AccountGateScreen extends StatelessWidget {
 
               const Spacer(flex: 2),
 
-              // Title
-              Center(
-                child: Text(
-                  AppStrings.accountGateTitle,
-                  style: Theme.of(context).textTheme.displayLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
               // Subtitle
               Center(
                 child: Text(
-                  AppStrings.accountGateSubtitle,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  l10n.loginSubtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                   textAlign: TextAlign.center,
                 ),
               ),
 
               const SizedBox(height: AppSpacing.xxl),
 
-              // Create account button
+              // Create account button → goes to LoginScreen
               KendinButton(
-                label: AppStrings.createNewAccount,
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SignupScreen()),
+                label: l10n.createAccount,
+                onPressed: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
                 ),
               ),
 
               const SizedBox(height: AppSpacing.md),
 
-              // Login link
+              // Already have account
               Center(
                 child: TextButton(
-                  onPressed: () => Navigator.of(context).push(
+                  onPressed: () => Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   ),
-                  child: const Text(AppStrings.alreadyHaveAccount),
+                  child: Text(l10n.haveAccount),
                 ),
               ),
 

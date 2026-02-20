@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kendin/core/constants/app_strings.dart';
+import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 import 'package:kendin/presentation/widgets/kendin_button.dart';
@@ -9,8 +9,7 @@ import 'package:kendin/presentation/widgets/kendin_button.dart';
 /// Email verification screen.
 ///
 /// Shown after signup. User must verify their email before
-/// purchasing premium. Shows a "Tekrar gönder" button and
-/// a "Doğruladım" button to check verification status.
+/// purchasing premium.
 class VerifyEmailScreen extends ConsumerStatefulWidget {
   const VerifyEmailScreen({super.key});
 
@@ -24,6 +23,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -44,7 +45,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               // Title
               Center(
                 child: Text(
-                  AppStrings.verifyEmailTitle,
+                  l10n.verifyEmailTitle,
                   style: Theme.of(context).textTheme.displayLarge,
                   textAlign: TextAlign.center,
                 ),
@@ -55,7 +56,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               // Message
               Center(
                 child: Text(
-                  AppStrings.verifyEmailMessage,
+                  l10n.verifyEmailMessage,
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -65,7 +66,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
               // "I've verified" button
               KendinButton(
-                label: AppStrings.verificationDone,
+                label: l10n.verifyEmailDone,
                 isLoading: _isChecking,
                 onPressed: _isChecking ? null : () => _checkVerification(),
               ),
@@ -82,7 +83,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                           width: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text(AppStrings.resendVerification),
+                      : Text(l10n.verifyEmailResend),
                 ),
               ),
 
@@ -102,7 +103,6 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
           await ref.read(authServiceProvider).isEmailVerified();
 
       if (verified) {
-        // Refresh user state.
         await ref.read(currentUserProvider.notifier).refresh();
 
         if (mounted) {
@@ -110,9 +110,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         }
       } else {
         if (mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(AppStrings.verifyEmailMessage),
+            SnackBar(
+              content: Text(l10n.verifyEmailMessage),
               behavior: SnackBarBehavior.floating,
             ),
           );
@@ -120,9 +121,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.genericError),
+          SnackBar(
+            content: Text(l10n.genericError),
             behavior: SnackBarBehavior.floating,
           ),
         );
