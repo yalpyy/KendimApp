@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 import 'package:kendin/core/errors/app_exception.dart';
 import 'package:kendin/data/datasources/supabase_client_setup.dart';
