@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:kendin/core/constants/app_constants.dart';
@@ -10,6 +11,9 @@ class SupabaseClientSetup {
 
   /// Call once in main() before runApp().
   static Future<void> initialize() async {
+    debugPrint('[Kendin] Supabase URL: ${AppConstants.supabaseUrl.isNotEmpty ? "SET" : "EMPTY"}');
+    debugPrint('[Kendin] Supabase Key: ${AppConstants.supabaseAnonKey.isNotEmpty ? "SET" : "EMPTY"}');
+
     await Supabase.initialize(
       url: AppConstants.supabaseUrl,
       anonKey: AppConstants.supabaseAnonKey,
@@ -17,5 +21,7 @@ class SupabaseClientSetup {
         authFlowType: AuthFlowType.pkce,
       ),
     );
+
+    debugPrint('[Kendin] Supabase client initialized successfully');
   }
 }

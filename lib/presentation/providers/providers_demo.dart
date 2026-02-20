@@ -1,10 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kendin/data/datasources/demo/demo_auth_repository.dart';
-import 'package:kendin/data/datasources/demo/demo_entry_repository.dart';
-import 'package:kendin/data/datasources/demo/demo_notification_service.dart';
+import 'package:kendin/core/utils/date_utils.dart';
+import 'package:kendin/data/datasources/auth_datasource.dart';
+import 'package:kendin/data/datasources/entry_datasource.dart';
+import 'package:kendin/data/datasources/reflection_datasource.dart';
+import 'package:kendin/data/datasources/supabase_client_setup.dart';
 import 'package:kendin/data/datasources/demo/demo_premium_service.dart';
-import 'package:kendin/data/datasources/demo/demo_reflection_repository.dart';
+import 'package:kendin/data/repositories/auth_repository_impl.dart';
+import 'package:kendin/data/repositories/entry_repository_impl.dart';
+import 'package:kendin/data/repositories/reflection_repository_impl.dart';
 import 'package:kendin/domain/entities/user_entity.dart';
 import 'package:kendin/domain/entities/weekly_reflection_entity.dart';
 import 'package:kendin/domain/repositories/entry_repository.dart';
@@ -14,57 +18,66 @@ import 'package:kendin/domain/usecases/entry_service.dart';
 import 'package:kendin/domain/usecases/reflection_service_base.dart';
 import 'package:kendin/domain/usecases/strike_manager.dart';
 
-// ─── Demo Datasources ─────────────────────────────
-// These are web-safe: no Supabase, no dart:io, no native plugins.
+// ─── Datasources (real Supabase) ─────────────────
 
-final _demoAuthRepository = DemoAuthRepository();
-final _demoEntryRepository = DemoEntryRepository();
+final authDatasourceProvider = Provider((_) => AuthDatasource());
+final entryDatasourceProvider = Provider((_) => EntryDatasource());
+final reflectionDatasourceProvider = Provider((_) => ReflectionDatasource());
 
-final authDatasourceProvider = Provider((_) => _demoAuthRepository);
-final entryDatasourceProvider = Provider((_) => _demoEntryRepository);
-final reflectionDatasourceProvider = Provider(
-  (_) => DemoReflectionRepository(_demoEntryRepository),
+// ─── Repositories (real Supabase) ────────────────
+
+final authRepositoryProvider = Provider(
+  (ref) => AuthRepositoryImpl(ref.read(authDatasourceProvider)),
 );
 
-// ─── Repositories ─────────────────────────────────
-
-final authRepositoryProvider = Provider((_) => _demoAuthRepository);
-
 final entryRepositoryProvider = Provider<EntryRepository>(
-  (_) => _demoEntryRepository,
+  (ref) => EntryRepositoryImpl(ref.read(entryDatasourceProvider)),
 );
 
 final reflectionRepositoryProvider = Provider<ReflectionRepository>(
-  (_) => DemoReflectionRepository(_demoEntryRepository),
+  (ref) => ReflectionRepositoryImpl(ref.read(reflectionDatasourceProvider)),
 );
 
-// ─── Services ─────────────────────────────────────
+// ─── Services ────────────────────────────────────
 
 final authServiceProvider = Provider(
-  (ref) => AuthService(_demoAuthRepository),
+  (ref) => AuthService(ref.read(authRepositoryProvider)),
 );
 
 final entryServiceProvider = Provider(
   (ref) => EntryService(ref.read(entryRepositoryProvider)),
 );
 
-final notificationServiceProvider = Provider((_) => DemoNotificationService());
+/// No-op on web — flutter_local_notifications is native-only.
+final notificationServiceProvider = Provider((_) => _NoOpNotificationService());
 
 final strikeManagerProvider = Provider(
-  (ref) => StrikeManager(ref.read(entryRepositoryProvider)),
+  (ref) => StrikeManager(
+    ref.read(entryRepositoryProvider),
+    updateMissTokens: (userId, newTokenCount) async {
+      await SupabaseClientSetup.client
+          .from('users')
+          .update({
+            'premium_miss_tokens': newTokenCount,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', userId);
+    },
+  ),
 );
 
 final reflectionServiceProvider = Provider<ReflectionServiceBase>(
-  (ref) => _DemoReflectionService(
+  (ref) => _WebReflectionService(
     ref.read(reflectionRepositoryProvider),
+    ref.read(strikeManagerProvider),
   ),
 );
 
 final premiumServiceProvider = Provider((_) => DemoPremiumService());
 
-// ─── State ────────────────────────────────────────
+// ─── State ───────────────────────────────────────
 
-/// Current authenticated user (demo: resolved immediately).
+/// Current authenticated user.
 final currentUserProvider =
     StateNotifierProvider<CurrentUserNotifier, AsyncValue<UserEntity?>>(
   (ref) => CurrentUserNotifier(ref.read(authServiceProvider)),
@@ -121,18 +134,21 @@ final currentReflectionProvider = FutureProvider.autoDispose((ref) async {
   return ref.read(reflectionServiceProvider).getCurrentReflection(user.id);
 });
 
-// ─── Demo Reflection Service ──────────────────────
-// Lightweight: generates mock reflection instantly, no notifications.
+// ─── Web-safe Reflection Service ─────────────────
+// Uses real Supabase repositories but skips local notifications.
 
-class _DemoReflectionService implements ReflectionServiceBase {
-  _DemoReflectionService(this._reflectionRepository);
+class _WebReflectionService implements ReflectionServiceBase {
+  _WebReflectionService(this._reflectionRepository, this._strikeManager);
 
   final ReflectionRepository _reflectionRepository;
+  final StrikeManager _strikeManager;
 
   @override
   Future<bool> triggerReflection(UserEntity user) async {
-    // In demo mode, always allow reflection regardless of strike.
-    final weekStart = _weekStart(DateTime.now());
+    final canAccess = await _strikeManager.canAccessReflection(user);
+    if (!canAccess) return false;
+
+    final weekStart = KendinDateUtils.weekStart(DateTime.now());
 
     final existing = await _reflectionRepository.getReflection(
       user.id,
@@ -145,12 +161,14 @@ class _DemoReflectionService implements ReflectionServiceBase {
       weekStart,
       isPremium: user.isPremium,
     );
+
+    // No notification scheduling on web.
     return true;
   }
 
   @override
   Future<WeeklyReflectionEntity?> getCurrentReflection(String userId) {
-    final weekStart = _weekStart(DateTime.now());
+    final weekStart = KendinDateUtils.weekStart(DateTime.now());
     return _reflectionRepository.getReflection(userId, weekStart);
   }
 
@@ -165,16 +183,19 @@ class _DemoReflectionService implements ReflectionServiceBase {
   }
 
   @override
-  bool isSundayMode() => DateTime.now().weekday == DateTime.sunday;
+  bool isSundayMode() => KendinDateUtils.isSunday(DateTime.now());
 
   @override
   Future<bool> isReflectionReady(String userId) async {
     final reflection = await getCurrentReflection(userId);
     return reflection != null;
   }
+}
 
-  DateTime _weekStart(DateTime date) {
-    final d = DateTime(date.year, date.month, date.day);
-    return d.subtract(Duration(days: d.weekday - DateTime.monday));
-  }
+/// Stub notification service for web builds.
+class _NoOpNotificationService {
+  Future<void> initialize() async {}
+  Future<bool> requestPermission() async => true;
+  Future<void> scheduleReflectionReady() async {}
+  Future<void> cancelReflectionNotification() async {}
 }
