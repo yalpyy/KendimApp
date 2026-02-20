@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 import 'package:kendin/core/errors/app_exception.dart';
@@ -22,20 +23,57 @@ class AuthDatasource {
   }
 
   /// Returns the current user from the session, or null.
+  ///
+  /// If the session exists but the `users` table row is missing (e.g. no
+  /// database trigger), an initial row is created automatically via upsert.
   Future<UserModel?> getCurrentUser() async {
     final session = _auth.currentSession;
     if (session == null) return null;
 
     final userId = session.user.id;
+    final isAnon = session.user.userMetadata?['is_anonymous'] == true;
+    final email = session.user.email;
+    final verified = session.user.emailConfirmedAt != null;
+    final displayName =
+        session.user.userMetadata?['display_name'] as String?;
+
     try {
-      final data =
-          await _client.from('users').select().eq('id', userId).single();
-      return UserModel.fromJson({
-        ...data,
-        'is_anonymous': session.user.userMetadata?['is_anonymous'] ?? false,
-        'email': session.user.email,
-        'email_verified': session.user.emailConfirmedAt != null,
+      final data = await _client
+          .from('users')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (data != null) {
+        return UserModel.fromJson({
+          ...data,
+          'is_anonymous': isAnon,
+          'email': email,
+          'email_verified': verified,
+        });
+      }
+
+      // Row missing — create it so downstream code can proceed.
+      debugPrint('[AuthDatasource] No users row for $userId — creating one');
+      final now = DateTime.now().toIso8601String();
+      await _client.from('users').upsert({
+        'id': userId,
+        'is_premium': false,
+        'premium_miss_tokens': 3,
+        'display_name': displayName,
+        'created_at': now,
+        'updated_at': now,
       });
+
+      return UserModel(
+        id: userId,
+        isPremium: false,
+        premiumMissTokens: 3,
+        email: email,
+        displayName: displayName,
+        isAnonymous: isAnon,
+        emailVerified: verified,
+      );
     } catch (e) {
       throw AuthException('Failed to fetch user: $e');
     }
