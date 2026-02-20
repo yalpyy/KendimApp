@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_theme.dart';
+import 'package:kendin/presentation/providers/locale_provider.dart';
 import 'package:kendin/presentation/screens/home/home_screen.dart';
 import 'package:kendin/presentation/screens/landing/landing_screen.dart';
 
@@ -27,11 +28,16 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final hasSeenLanding = prefs.getBool('has_seen_landing') ?? false;
 
+  // Load saved locale preference.
+  final savedLocale = prefs.getString('app_locale');
+
   runApp(
     ProviderScope(
       child: KendinApp(
         onDispose: disposer,
         showLanding: !hasSeenLanding,
+        initialLocale:
+            savedLocale != null ? Locale(savedLocale) : null,
       ),
     ),
   );
@@ -40,21 +46,34 @@ void main() async {
 /// Callback to clean up resources when the app is disposed.
 typedef AppDisposer = void Function();
 
-class KendinApp extends StatefulWidget {
+class KendinApp extends ConsumerStatefulWidget {
   const KendinApp({
     super.key,
     required this.onDispose,
     required this.showLanding,
+    this.initialLocale,
   });
 
   final AppDisposer onDispose;
   final bool showLanding;
+  final Locale? initialLocale;
 
   @override
-  State<KendinApp> createState() => _KendinAppState();
+  ConsumerState<KendinApp> createState() => _KendinAppState();
 }
 
-class _KendinAppState extends State<KendinApp> {
+class _KendinAppState extends ConsumerState<KendinApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Apply saved locale on startup.
+    if (widget.initialLocale != null) {
+      Future.microtask(() {
+        ref.read(localeProvider.notifier).state = widget.initialLocale;
+      });
+    }
+  }
+
   @override
   void dispose() {
     widget.onDispose();
@@ -63,6 +82,8 @@ class _KendinAppState extends State<KendinApp> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedLocale = ref.watch(localeProvider);
+
     return MaterialApp(
       title: 'Kendin',
       debugShowCheckedModeBanner: false,
@@ -75,6 +96,7 @@ class _KendinAppState extends State<KendinApp> {
         DefaultWidgetsLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      locale: selectedLocale,
       home: widget.showLanding ? const LandingScreen() : const HomeScreen(),
     );
   }
