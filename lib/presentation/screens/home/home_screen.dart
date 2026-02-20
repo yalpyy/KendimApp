@@ -327,7 +327,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (text.isEmpty) return;
 
     final user = ref.read(currentUserProvider).valueOrNull;
-    if (user == null) return;
+    if (user == null) {
+      debugPrint('[HomeScreen] Cannot submit — user is null (auth failed)');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).genericError),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
