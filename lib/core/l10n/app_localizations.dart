@@ -91,6 +91,20 @@ class AppLocalizations {
       // Language
       'language_title': 'Dil',
 
+      // Reflection
+      'reflection_loading': 'Haftanı bir araya getiriyorum.\nHemen değil.',
+      'reflection_not_ready':
+          'Yansıman hazırlanıyor. Birazdan geri dön.',
+      'premium_cta_strong':
+          'Bu haftada daha fazlası vardı.\nDerinlik ile tamamını gör.',
+      'premium_monthly_price': '49₺ / ay',
+      'archive': 'Arşivle',
+      'archived': 'Arşivlendi',
+
+      // Settings
+      'settings_title': 'Ayarlar',
+      'restore_purchase': 'Satın almayı geri yükle',
+
       // Errors
       'generic_error': 'Bir şeyler ters gitti. Tekrar dene.',
       'email_required': 'E-posta gerekli.',
@@ -165,6 +179,21 @@ class AppLocalizations {
 
       // Language
       'language_title': 'Language',
+
+      // Reflection
+      'reflection_loading':
+          'Putting your week together.\nNot right now.',
+      'reflection_not_ready':
+          'Your reflection is being prepared. Come back soon.',
+      'premium_cta_strong':
+          'There was more this week.\nSee the full picture with Depth.',
+      'premium_monthly_price': '49₺ / mo',
+      'archive': 'Archive',
+      'archived': 'Archived',
+
+      // Settings
+      'settings_title': 'Settings',
+      'restore_purchase': 'Restore purchase',
 
       // Errors
       'generic_error': 'Something went wrong. Try again.',
@@ -242,6 +271,18 @@ class AppLocalizations {
 
   // Language
   String get languageTitle => _get('language_title');
+
+  // Reflection
+  String get reflectionLoading => _get('reflection_loading');
+  String get reflectionNotReady => _get('reflection_not_ready');
+  String get premiumCtaStrong => _get('premium_cta_strong');
+  String get premiumMonthlyPrice => _get('premium_monthly_price');
+  String get archive => _get('archive');
+  String get archived => _get('archived');
+
+  // Settings
+  String get settingsTitle => _get('settings_title');
+  String get restorePurchase => _get('restore_purchase');
 
   // Errors
   String get genericError => _get('generic_error');

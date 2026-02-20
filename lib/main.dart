@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +10,7 @@ import 'package:kendin/presentation/providers/locale_provider.dart';
 import 'package:kendin/presentation/screens/home/home_screen.dart';
 import 'package:kendin/presentation/screens/landing/landing_screen.dart';
 
-// Conditional import: production init on native, demo (no-op) on web.
+// Conditional import: production init on native, web init on web.
 import 'package:kendin/app_init/app_init_production.dart'
     if (dart.library.html) 'package:kendin/app_init/app_init_demo.dart';
 
@@ -20,9 +21,14 @@ void main() async {
     DeviceOrientation.portraitUp,
   ]);
 
-  // Initializes Supabase + notifications + IAP in production,
-  // or does nothing in demo mode.
-  final disposer = await initializeApp();
+  // Initialize Supabase + services. Wrapped in try/catch so the app
+  // still starts if Supabase init fails (e.g. empty URL on web).
+  AppDisposer disposer = () {};
+  try {
+    disposer = await initializeApp();
+  } catch (e) {
+    debugPrint('[Kendin] initializeApp failed: $e');
+  }
 
   // Check if user has seen the landing screen.
   final prefs = await SharedPreferences.getInstance();

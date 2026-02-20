@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:kendin/core/constants/app_strings.dart';
+import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 import 'package:kendin/presentation/screens/premium/premium_paywall_screen.dart';
 
 /// Displays the weekly reflection.
 ///
-/// Shows a loading state initially ("Haftanı bir araya getiriyorum.
-/// Hemen değil."), then polls until the reflection is ready.
+/// Shows a loading state initially, then polls until the reflection is ready.
 ///
 /// After the reflection is shown:
-/// - Free users see a premium CTA ("Bu haftada daha fazlası vardı")
+/// - Free users see a premium CTA
 /// - Premium users see the archive button
 class ReflectionScreen extends ConsumerStatefulWidget {
   const ReflectionScreen({super.key});
@@ -65,6 +64,7 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final user = ref.watch(currentUserProvider).valueOrNull;
     final isPremium = user?.isPremium ?? false;
 
@@ -90,7 +90,7 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
                 // Loading state
                 Center(
                   child: Text(
-                    AppStrings.reflectionLoading,
+                    l10n.reflectionLoading,
                     style: Theme.of(context).textTheme.displayLarge,
                     textAlign: TextAlign.center,
                   ),
@@ -115,7 +115,7 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
                 // Not ready yet
                 Center(
                   child: Text(
-                    AppStrings.reflectionNotReady,
+                    l10n.reflectionNotReady,
                     style: Theme.of(context).textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -125,14 +125,14 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
                 const SizedBox(height: AppSpacing.xl),
 
                 // Premium CTA for free users
-                if (!isPremium) _buildPremiumCta(context),
+                if (!isPremium) _buildPremiumCta(context, l10n),
 
                 // Archive button for premium users
                 if (isPremium)
                   Center(
                     child: TextButton(
                       onPressed: () => _archive(),
-                      child: const Text(AppStrings.archive),
+                      child: Text(l10n.archive),
                     ),
                   ),
               ],
@@ -145,12 +145,12 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
     );
   }
 
-  Widget _buildPremiumCta(BuildContext context) {
+  Widget _buildPremiumCta(BuildContext context, AppLocalizations l10n) {
     return Column(
       children: [
         // Strong CTA text
         Text(
-          AppStrings.premiumCtaStrong,
+          l10n.premiumCtaStrong,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.primary,
               ),
@@ -170,7 +170,7 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
               ),
             ),
             child: Text(
-              '${AppStrings.premiumTitle} — ${AppStrings.premiumMonthlyPrice}',
+              '${l10n.premiumTitle} — ${l10n.premiumMonthlyPrice}',
             ),
           ),
         ),
@@ -181,6 +181,8 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
   Future<void> _archive() async {
     if (_reflectionId == null) return;
 
+    final l10n = AppLocalizations.of(context);
+
     try {
       await ref
           .read(reflectionServiceProvider)
@@ -188,8 +190,8 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.archived),
+          SnackBar(
+            content: Text(l10n.archived),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -197,8 +199,8 @@ class _ReflectionScreenState extends ConsumerState<ReflectionScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.genericError),
+          SnackBar(
+            content: Text(l10n.genericError),
             behavior: SnackBarBehavior.floating,
           ),
         );
