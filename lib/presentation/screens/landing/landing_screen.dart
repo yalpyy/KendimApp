@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,12 +18,15 @@ class LandingScreen extends StatelessWidget {
 
   static const _prefsKey = 'has_seen_landing';
 
-  Future<void> _onStart(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefsKey, true);
+  void _onStart(BuildContext context) {
+    // Save preference in the background — don't block navigation.
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool(_prefsKey, true);
+    }).catchError((e) {
+      debugPrint('[Kendin] Failed to save landing preference: $e');
+    });
 
-    if (!context.mounted) return;
-
+    // Navigate immediately.
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => const HomeScreen(),
