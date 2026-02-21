@@ -26,6 +26,10 @@ enum DayState {
 ///   - If not   → editing state (question + text field + "Yazdım")
 ///
 /// On Sunday: shows "Bu haftayı gör" instead.
+///
+/// Features:
+/// - 23:30 subtle banner if entry not written
+/// - Strike dots fade out after 1 second on app open
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -33,7 +37,8 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with SingleTickerProviderStateMixin {
   final _textController = TextEditingController();
   bool _isSubmitting = false;
 
@@ -41,22 +46,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   DayState? _dayState;
   bool _initialized = false;
 
+  // Strike dot fade animation
+  late final AnimationController _strikeFadeController;
+  late final Animation<double> _strikeFadeAnimation;
+  bool _strikeShownOnce = false;
+
   @override
   void initState() {
     super.initState();
     _textController.addListener(_onTextChanged);
+
+    // Fade controller: dots visible for 2s, then fade out over 0.5s
+    _strikeFadeController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _strikeFadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _strikeFadeController, curve: Curves.easeOut),
+    );
   }
 
   @override
   void dispose() {
     _textController.removeListener(_onTextChanged);
     _textController.dispose();
+    _strikeFadeController.dispose();
     super.dispose();
   }
 
-  /// Triggers rebuild so Yazdım button enables/disables based on text.
   void _onTextChanged() {
     setState(() {});
+  }
+
+  /// Start strike fade-out after a brief display.
+  void _scheduleStrikeFadeIfNeeded() {
+    if (_strikeShownOnce) return;
+    _strikeShownOnce = true;
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) _strikeFadeController.forward();
+    });
+  }
+
+  /// Whether to show the "Gün kapanıyor" banner.
+  bool get _showDayClosingNotice {
+    final now = DateTime.now();
+    return now.hour >= 23 && now.minute >= 30 && _dayState != DayState.completed;
   }
 
   @override
@@ -79,12 +113,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
+    // Schedule strike fade when data arrives
+    strikeAsync.whenData((_) => _scheduleStrikeFadeIfNeeded());
+
     return Scaffold(
       body: SafeArea(
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: Column(
             children: [
+              // 23:30 notice banner
+              if (_showDayClosingNotice)
+                _DayClosingBanner(text: l10n.dayClosingNotice),
+
               // Top bar — fixed
               Padding(
                 padding: const EdgeInsets.symmetric(
@@ -124,7 +165,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                       // ── Sunday flow ──
                       if (isSunday) ...[
-                        _buildStrikeRow(strikeAsync),
+                        _buildStrikeRow(strikeAsync, fade: false),
                         const SizedBox(height: AppSpacing.xxl),
                         Text(
                           l10n.seeThisWeek,
@@ -149,7 +190,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                       // ── Editing state ──
                       else ...[
-                        _buildStrikeRow(strikeAsync),
+                        _buildStrikeRow(strikeAsync, fade: true),
                         const SizedBox(height: AppSpacing.xxl),
                         Text(
                           l10n.mainQuestion,
@@ -174,13 +215,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   // ─── Strike row (reused in editing + sunday) ───────
 
-  Widget _buildStrikeRow(AsyncValue<StrikeState?> strikeAsync) {
+  Widget _buildStrikeRow(AsyncValue<StrikeState?> strikeAsync, {bool fade = false}) {
     return strikeAsync.when(
       data: (strike) {
         if (strike == null) return const SizedBox.shrink();
-        return StrikeIndicator(
+        final indicator = StrikeIndicator(
           completedDays: strike.completedDays,
           daysWithEntries: strike.daysWithEntries,
+        );
+        if (!fade) return indicator;
+        return FadeTransition(
+          opacity: _strikeFadeAnimation,
+          child: indicator,
         );
       },
       loading: () => const SizedBox(height: AppSpacing.strikeDotSize),
@@ -226,11 +272,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isSaturdayComplete =
         isSaturday && strike != null && strike.completedDays >= 6;
 
-    debugPrint(
-      '[HomeScreen] Completed: saturday=$isSaturday, '
-      'strike=${strike?.completedDays}, saturdayComplete=$isSaturdayComplete',
-    );
-
     return Column(
       children: [
         if (isSaturdayComplete) ...[
@@ -253,8 +294,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
 
         const SizedBox(height: AppSpacing.lg),
-
-        _buildStrikeRow(strikeAsync),
+        _buildStrikeRow(strikeAsync, fade: false),
         const SizedBox(height: AppSpacing.lg),
 
         KendinButton(
@@ -300,9 +340,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     padding: const EdgeInsets.only(top: AppSpacing.md),
                     child: TextButton(
                       onPressed: () => _useMissTokens(),
-                      child: Text(
-                        '${user.premiumMissTokens}',
-                      ),
+                      child: Text('${user.premiumMissTokens}'),
                     ),
                   );
                 },
@@ -353,7 +391,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _dayState = DayState.completed;
         _isSubmitting = false;
       });
-      debugPrint('[HomeScreen] State → completed');
 
       ref.invalidate(strikeStateProvider);
       ref.invalidate(todayEntryProvider);
@@ -384,13 +421,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _textController.selection = TextSelection.collapsed(
           offset: _textController.text.length,
         );
-        debugPrint(
-          '[HomeScreen] Güne ekle: loaded ${entry.text.length} chars',
-        );
       }
 
       setState(() => _dayState = DayState.editing);
-      debugPrint('[HomeScreen] State → editing');
     } catch (e) {
       debugPrint('[HomeScreen] Error in Güne ekle: $e');
       if (mounted) {
@@ -411,9 +444,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final user = ref.read(currentUserProvider).valueOrNull;
     if (user == null) return;
 
-    if (!strike.isWeekComplete && !user.isPremium) {
-      return;
-    }
+    if (!strike.isWeekComplete && !user.isPremium) return;
 
     setState(() => _isSubmitting = true);
 
@@ -425,9 +456,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
       if (triggered && mounted) {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const ReflectionScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const ReflectionScreen()),
         );
       }
     } catch (e) {
@@ -469,6 +498,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _openMenu(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const MenuScreen()),
+    );
+  }
+}
+
+/// Subtle top banner: "Gün kapanıyor."
+class _DayClosingBanner extends StatelessWidget {
+  const _DayClosingBanner({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.sm,
+        horizontal: AppSpacing.screenHorizontal,
+      ),
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Text(
+        text,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }
