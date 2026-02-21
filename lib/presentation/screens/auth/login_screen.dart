@@ -5,13 +5,15 @@ import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 import 'package:kendin/presentation/screens/auth/verify_email_screen.dart';
+import 'package:kendin/presentation/screens/legal/privacy_policy_screen.dart';
+import 'package:kendin/presentation/screens/legal/terms_of_service_screen.dart';
+import 'package:kendin/presentation/screens/legal/kvkk_screen.dart';
 import 'package:kendin/presentation/widgets/kendin_button.dart';
 
 /// Unified auth screen with sign-in / sign-up toggle.
 ///
 /// Sign-in: email + password.
-/// Sign-up: name + email + password.
-/// Subtitle: "Yazdıklarını kaybetmemek için."
+/// Sign-up: name + email + password + legal acceptance checkbox.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -25,6 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _isSignUp = false;
+  bool _legalAccepted = false;
 
   @override
   void dispose() {
@@ -51,7 +54,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Back
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => Navigator.of(context).pop(),
@@ -67,7 +69,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-
                 const SizedBox(height: AppSpacing.sm),
 
                 // Subtitle
@@ -88,9 +89,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   TextField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      hintText: l10n.nameHint,
-                    ),
+                    decoration: InputDecoration(hintText: l10n.nameHint),
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
@@ -100,21 +99,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
-                  decoration: InputDecoration(
-                    hintText: l10n.emailHint,
-                  ),
+                  decoration: InputDecoration(hintText: l10n.emailHint),
                 ),
-
                 const SizedBox(height: AppSpacing.md),
 
                 // Password
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: l10n.passwordHint,
-                  ),
+                  decoration: InputDecoration(hintText: l10n.passwordHint),
                 ),
+
+                // Legal acceptance (sign-up only)
+                if (_isSignUp) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  _LegalCheckbox(
+                    accepted: _legalAccepted,
+                    onChanged: (v) => setState(() => _legalAccepted = v),
+                  ),
+                ],
 
                 const SizedBox(height: AppSpacing.xl),
 
@@ -124,15 +127,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   isLoading: _isLoading,
                   onPressed: _isLoading ? null : () => _submit(),
                 ),
-
                 const SizedBox(height: AppSpacing.md),
 
                 // Toggle sign-in / sign-up
                 Center(
                   child: TextButton(
-                    onPressed: () {
-                      setState(() => _isSignUp = !_isSignUp);
-                    },
+                    onPressed: () => setState(() => _isSignUp = !_isSignUp),
                     child: Text(
                       _isSignUp ? l10n.haveAccount : l10n.noAccount,
                     ),
@@ -168,6 +168,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
       if (password.length < 6) {
         _showError(l10n.passwordTooShort);
+        return;
+      }
+      if (!_legalAccepted) {
+        _showError(l10n.legalAcceptRequired);
         return;
       }
       await _signUp(name, email, password);
@@ -235,11 +239,96 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     }
+  }
+}
+
+/// Legal acceptance checkbox with tappable links to legal pages.
+class _LegalCheckbox extends StatelessWidget {
+  const _LegalCheckbox({
+    required this.accepted,
+    required this.onChanged,
+  });
+
+  final bool accepted;
+  final void Function(bool) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final subtleStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 24,
+          height: 24,
+          child: Checkbox(
+            value: accepted,
+            onChanged: (v) => onChanged(v ?? false),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Wrap(
+            children: [
+              Text(l10n.legalAcceptPrefix, style: subtleStyle),
+              _TapLink(
+                text: l10n.privacyPolicy,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyPolicyScreen(),
+                  ),
+                ),
+              ),
+              Text(', ', style: subtleStyle),
+              _TapLink(
+                text: l10n.termsOfService,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const TermsOfServiceScreen(),
+                  ),
+                ),
+              ),
+              Text(', ', style: subtleStyle),
+              _TapLink(
+                text: l10n.kvkkNotice,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const KvkkScreen(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TapLink extends StatelessWidget {
+  const _TapLink({required this.text, required this.onTap});
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              decoration: TextDecoration.underline,
+            ),
+      ),
+    );
   }
 }

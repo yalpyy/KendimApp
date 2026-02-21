@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kendin/core/l10n/app_localizations.dart';
+import 'package:kendin/core/theme/app_colors.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
+import 'package:kendin/presentation/screens/about/about_screen.dart';
 import 'package:kendin/presentation/screens/auth/login_screen.dart';
 import 'package:kendin/presentation/screens/language/language_screen.dart';
 import 'package:kendin/presentation/screens/premium/premium_paywall_screen.dart';
@@ -11,11 +13,9 @@ import 'package:kendin/presentation/screens/profile/profile_screen.dart';
 
 /// Card-based menu screen.
 ///
-/// Shows user greeting + 4 cards:
-/// - Derinlik (Premium)
-/// - Hesap (Account — login or profile)
-/// - Dil (Language)
-/// - Hakkında (About)
+/// Top section: username (large) + account status.
+/// Cards: Derinlik, Hesap, Dil, Hakkında.
+/// Minimal, rounded, soft shadow, calm.
 class MenuScreen extends ConsumerWidget {
   const MenuScreen({super.key});
 
@@ -43,23 +43,21 @@ class MenuScreen extends ConsumerWidget {
 
               const SizedBox(height: AppSpacing.xl),
 
-              // User greeting + status
+              // User name + account status
               userAsync.when(
                 data: (user) {
                   if (user == null) return const SizedBox.shrink();
-                  final name = user.isAnonymous
-                      ? null
-                      : user.displayName;
+                  final name = user.isAnonymous ? null : user.displayName;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (name != null && name.isNotEmpty) ...[
-                        Text(
-                          name,
-                          style: theme.textTheme.displayLarge,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                      ],
+                      Text(
+                        (name != null && name.isNotEmpty)
+                            ? name
+                            : 'Kendin',
+                        style: theme.textTheme.displayLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         user.isPremium
                             ? l10n.profilePremium
@@ -132,7 +130,11 @@ class MenuScreen extends ConsumerWidget {
               _MenuCard(
                 title: l10n.menuAboutTitle,
                 subtitle: 'Kendin',
-                onTap: () {},
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AboutScreen(),
+                  ),
+                ),
               ),
             ],
           ),
@@ -156,6 +158,7 @@ class _MenuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: onTap,
@@ -165,6 +168,16 @@ class _MenuCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          boxShadow: [
+            BoxShadow(
+              // ignore: deprecated_member_use
+              color: isDark
+                  ? Colors.black.withOpacity(0.2)
+                  : AppColors.lightDivider.withOpacity(0.5),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
