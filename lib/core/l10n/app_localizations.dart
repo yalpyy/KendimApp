@@ -102,6 +102,13 @@ class AppLocalizations {
       'profile_free': 'Ücretsiz',
       'profile_premium': 'Premium',
       'sign_out': 'Çıkış yap',
+      'delete_account': 'Hesabı Sil',
+      'delete_account_confirm_title': 'Hesabını silmek istediğinden emin misin?',
+      'delete_account_confirm_body':
+          'Tüm yazıların, yansımaların ve hesap bilgilerin kalıcı olarak silinecek. Bu işlem geri alınamaz.',
+      'delete_account_confirm_button': 'Evet, hesabımı sil',
+      'cancel': 'Vazgeç',
+      'account_deleted': 'Hesabın silindi.',
 
       // Language
       'language_title': 'Dil',
@@ -235,6 +242,13 @@ class AppLocalizations {
       'profile_free': 'Free',
       'profile_premium': 'Premium',
       'sign_out': 'Sign out',
+      'delete_account': 'Delete Account',
+      'delete_account_confirm_title': 'Are you sure you want to delete your account?',
+      'delete_account_confirm_body':
+          'All your entries, reflections, and account information will be permanently deleted. This action cannot be undone.',
+      'delete_account_confirm_button': 'Yes, delete my account',
+      'cancel': 'Cancel',
+      'account_deleted': 'Your account has been deleted.',
 
       // Language
       'language_title': 'Language',
@@ -366,6 +380,12 @@ class AppLocalizations {
   String get profileFree => _get('profile_free');
   String get profilePremium => _get('profile_premium');
   String get signOut => _get('sign_out');
+  String get deleteAccount => _get('delete_account');
+  String get deleteAccountConfirmTitle => _get('delete_account_confirm_title');
+  String get deleteAccountConfirmBody => _get('delete_account_confirm_body');
+  String get deleteAccountConfirmButton => _get('delete_account_confirm_button');
+  String get cancel => _get('cancel');
+  String get accountDeleted => _get('account_deleted');
 
   // Language
   String get languageTitle => _get('language_title');

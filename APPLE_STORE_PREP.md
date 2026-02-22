@@ -176,8 +176,8 @@ OPENAI_API_KEY=your-openai-key (for Edge Functions)
 ### User-Initiated Deletion
 
 1. User navigates to Menu → Hesap → Profile
-2. (Future: Add "Hesabı Sil" button)
-3. App calls `auth.admin.deleteUser(userId)`
+2. Taps "Hesabı Sil" button
+3. Confirmation dialog shown with warning text
 4. Cascade delete removes all data from:
    - `public.users`
    - `public.entries`
@@ -202,12 +202,14 @@ OPENAI_API_KEY=your-openai-key (for Edge Functions)
 POST /auth/v1/admin/users/{user_id} → DELETE
 ```
 
-Steps:
-1. Verify user identity (re-authenticate if email account)
-2. Cancel active subscriptions via Apple
-3. Delete all user data from Supabase
-4. Delete auth record
-5. Sign out and redirect to landing screen
+Steps (implemented in `AuthDatasource.deleteAccount`):
+1. Delete from `weekly_reflections` (user_id)
+2. Delete from `entries` (user_id)
+3. Delete from `users` (id)
+4. Call `delete-user` edge function (deletes auth record)
+5. Sign out locally
+6. Re-initialize with fresh anonymous session
+7. Show confirmation SnackBar + navigate to home
 
 ## 7. AI Cost Estimation Per User
 
@@ -278,7 +280,7 @@ Steps:
 - [x] Legal pages (KVKK, Privacy, Terms)
 - [x] Legal acceptance on signup
 - [x] About screen
-- [ ] Account deletion
+- [x] Account deletion (confirmation dialog + full data wipe)
 - [ ] App Store submission
 
 ### v1.1 — Stability

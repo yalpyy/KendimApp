@@ -33,6 +33,9 @@ class AuthRepositoryImpl implements AuthRepository {
       _datasource.migrateAnonymousData(oldUserId, newUserId);
 
   @override
+  Future<void> deleteAccount(String userId) => _datasource.deleteAccount(userId);
+
+  @override
   Future<void> signOut() => _datasource.signOut();
 
   @override

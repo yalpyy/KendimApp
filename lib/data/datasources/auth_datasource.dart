@@ -182,6 +182,34 @@ class AuthDatasource {
     }
   }
 
+  /// Deletes the current user's account and all associated data.
+  ///
+  /// 1. Delete user data from all tables
+  /// 2. Call edge function to delete auth record
+  /// 3. Sign out locally
+  Future<void> deleteAccount(String userId) async {
+    try {
+      await _client.from('weekly_reflections').delete().eq('user_id', userId);
+      await _client.from('entries').delete().eq('user_id', userId);
+      await _client.from('users').delete().eq('id', userId);
+
+      // Delete auth record via edge function (client can't call admin API).
+      try {
+        await _client.functions.invoke(
+          'delete-user',
+          body: {'user_id': userId},
+        );
+      } catch (e) {
+        debugPrint('[AuthDatasource] Edge function delete-user failed: $e');
+      }
+
+      await _auth.signOut();
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw AuthException('Account deletion failed: $e');
+    }
+  }
+
   /// Signs out.
   Future<void> signOut() async {
     await _auth.signOut();

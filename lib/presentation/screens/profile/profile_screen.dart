@@ -5,9 +5,10 @@ import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 
-/// Minimal profile screen.
+/// Profile screen.
 ///
-/// Shows: display name, email, premium status, sign out button.
+/// Shows: display name, email, premium status, sign out, delete account.
+/// Account deletion shows a confirmation dialog first.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -100,6 +101,22 @@ class ProfileScreen extends ConsumerWidget {
                           child: Text(
                             l10n.signOut,
                             style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: AppSpacing.md),
+
+                      // Delete account
+                      Center(
+                        child: TextButton(
+                          onPressed: () =>
+                              _confirmDeleteAccount(context, ref, user.id),
+                          child: Text(
+                            l10n.deleteAccount,
+                            style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.error,
                             ),
                           ),
@@ -134,6 +151,84 @@ class ProfileScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.genericError),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+    String userId,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            l10n.deleteAccountConfirmTitle,
+            style: theme.textTheme.titleMedium,
+          ),
+          content: Text(
+            l10n.deleteAccountConfirmBody,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                _deleteAccount(context, ref, userId);
+              },
+              child: Text(
+                l10n.deleteAccountConfirmButton,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+    String userId,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref.read(authServiceProvider).deleteAccount(userId);
+
+      // Re-initialize with a fresh anonymous session.
+      final newUser = await ref.read(authServiceProvider).initialize();
+      ref.read(currentUserProvider.notifier).setUser(newUser);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.accountDeleted),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.genericError),

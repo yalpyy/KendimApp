@@ -24,6 +24,9 @@ abstract class AuthRepository {
   /// Calls the migrate-user-data edge function.
   Future<void> migrateAnonymousData(String oldUserId, String newUserId);
 
+  /// Deletes the user's account and all associated data.
+  Future<void> deleteAccount(String userId);
+
   /// Signs out the current user.
   Future<void> signOut();
 
