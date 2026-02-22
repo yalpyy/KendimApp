@@ -42,6 +42,10 @@ class AuthService {
   Future<void> migrateAnonymousData(String oldUserId, String newUserId) =>
       _repository.migrateAnonymousData(oldUserId, newUserId);
 
+  /// Deletes the user's account, all data, and signs out.
+  Future<void> deleteAccount(String userId) =>
+      _repository.deleteAccount(userId);
+
   Future<void> signOut() => _repository.signOut();
 
   Stream<UserEntity?> get authStateChanges => _repository.authStateChanges;
