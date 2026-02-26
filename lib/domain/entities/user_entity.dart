@@ -7,6 +7,7 @@ class UserEntity {
     this.displayName,
     this.isAnonymous = true,
     this.emailVerified = false,
+    this.isAdmin = false,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class UserEntity {
   final String? displayName;
   final bool isAnonymous;
   final bool emailVerified;
+  final bool isAdmin;
 
   UserEntity copyWith({
     String? id,
@@ -25,6 +27,7 @@ class UserEntity {
     String? displayName,
     bool? isAnonymous,
     bool? emailVerified,
+    bool? isAdmin,
   }) {
     return UserEntity(
       id: id ?? this.id,
@@ -34,6 +37,7 @@ class UserEntity {
       displayName: displayName ?? this.displayName,
       isAnonymous: isAnonymous ?? this.isAnonymous,
       emailVerified: emailVerified ?? this.emailVerified,
+      isAdmin: isAdmin ?? this.isAdmin,
     );
   }
 }
