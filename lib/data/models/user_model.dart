@@ -9,6 +9,7 @@ class UserModel extends UserEntity {
     super.displayName,
     super.isAnonymous,
     super.emailVerified,
+    super.isAdmin,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -20,6 +21,7 @@ class UserModel extends UserEntity {
       displayName: json['display_name'] as String?,
       isAnonymous: json['is_anonymous'] as bool? ?? true,
       emailVerified: json['email_verified'] as bool? ?? false,
+      isAdmin: json['is_admin'] as bool? ?? false,
     );
   }
 

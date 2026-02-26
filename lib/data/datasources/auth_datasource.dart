@@ -59,6 +59,7 @@ class AuthDatasource {
       await _client.from('users').upsert({
         'id': userId,
         'is_premium': false,
+        'is_admin': false,
         'premium_miss_tokens': 3,
         'display_name': displayName,
         'created_at': now,
@@ -73,6 +74,7 @@ class AuthDatasource {
         displayName: displayName,
         isAnonymous: isAnon,
         emailVerified: verified,
+        isAdmin: false,
       );
     } catch (e) {
       throw AuthException('Failed to fetch user: $e');
@@ -207,6 +209,42 @@ class AuthDatasource {
     } catch (e) {
       if (e is AuthException) rethrow;
       throw AuthException('Account deletion failed: $e');
+    }
+  }
+
+  // ─── Admin queries ─────────────────────────────────
+
+  /// Returns basic app statistics for the admin panel.
+  Future<Map<String, int>> getAdminStats() async {
+    try {
+      final users = await _client.from('users').select('id');
+      final premiumUsers =
+          await _client.from('users').select('id').eq('is_premium', true);
+      final entries = await _client.from('entries').select('id');
+      final reflections =
+          await _client.from('weekly_reflections').select('id');
+
+      return {
+        'total_users': (users as List).length,
+        'premium_users': (premiumUsers as List).length,
+        'total_entries': (entries as List).length,
+        'total_reflections': (reflections as List).length,
+      };
+    } catch (e) {
+      throw AuthException('Failed to fetch admin stats: $e');
+    }
+  }
+
+  /// Returns a list of all users (for admin).
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    try {
+      final data = await _client
+          .from('users')
+          .select()
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      throw AuthException('Failed to fetch users: $e');
     }
   }
 

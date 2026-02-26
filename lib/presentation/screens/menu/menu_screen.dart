@@ -6,16 +6,16 @@ import 'package:kendin/core/theme/app_colors.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 import 'package:kendin/presentation/screens/about/about_screen.dart';
+import 'package:kendin/presentation/screens/admin/admin_screen.dart';
 import 'package:kendin/presentation/screens/auth/login_screen.dart';
 import 'package:kendin/presentation/screens/language/language_screen.dart';
 import 'package:kendin/presentation/screens/premium/premium_paywall_screen.dart';
-import 'package:kendin/presentation/screens/profile/profile_screen.dart';
 
-/// Card-based menu screen.
+/// Settings / Menu screen.
 ///
-/// Top section: username (large) + account status.
-/// Cards: Derinlik, Hesap, Dil, Hakkında.
-/// Minimal, rounded, soft shadow, calm.
+/// Cards: Derinlik, Dil, Hakkında.
+/// Bottom: Giriş Yap / Çıkış Yap.
+/// Admin users also see "Admin Paneli" card.
 class MenuScreen extends ConsumerWidget {
   const MenuScreen({super.key});
 
@@ -75,7 +75,9 @@ class MenuScreen extends ConsumerWidget {
 
               const SizedBox(height: AppSpacing.xxl),
 
-              // Cards
+              // ─── Cards ─────────────────────────────────
+
+              // Derinlik
               _MenuCard(
                 title: l10n.menuPremiumTitle,
                 subtitle: l10n.menuPremiumSubtitle,
@@ -88,31 +90,7 @@ class MenuScreen extends ConsumerWidget {
 
               const SizedBox(height: AppSpacing.md),
 
-              // Account card — depends on auth state
-              userAsync.when(
-                data: (user) {
-                  if (user == null) return const SizedBox.shrink();
-                  final isAnon = user.isAnonymous;
-                  return _MenuCard(
-                    title: l10n.menuAccountTitle,
-                    subtitle: isAnon
-                        ? l10n.menuAccountSubtitleAnon
-                        : l10n.menuAccountSubtitleAuth,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => isAnon
-                            ? const LoginScreen()
-                            : const ProfileScreen(),
-                      ),
-                    ),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              ),
-
-              const SizedBox(height: AppSpacing.md),
-
+              // Dil
               _MenuCard(
                 title: l10n.menuLanguageTitle,
                 subtitle: Localizations.localeOf(context).languageCode == 'tr'
@@ -127,6 +105,7 @@ class MenuScreen extends ConsumerWidget {
 
               const SizedBox(height: AppSpacing.md),
 
+              // Hakkında
               _MenuCard(
                 title: l10n.menuAboutTitle,
                 subtitle: 'Kendin',
@@ -136,11 +115,101 @@ class MenuScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+
+              // Admin Paneli — only for admin users
+              userAsync.when(
+                data: (user) {
+                  if (user == null || !user.isAdmin) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.md),
+                    child: _MenuCard(
+                      title: l10n.menuAdmin,
+                      subtitle: '',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AdminScreen(),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+
+              const Spacer(),
+
+              // ─── Bottom: Giriş Yap / Çıkış Yap ─────────
+              userAsync.when(
+                data: (user) {
+                  if (user == null) return const SizedBox.shrink();
+                  final isAnon = user.isAnonymous;
+
+                  if (isAnon) {
+                    // Giriş Yap
+                    return Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                        ),
+                        child: Text(
+                          l10n.menuLogin,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  // Çıkış Yap (authenticated)
+                  return Center(
+                    child: TextButton(
+                      onPressed: () => _signOut(context, ref),
+                      child: Text(
+                        l10n.menuLogout,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+
+              const SizedBox(height: AppSpacing.md),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(authServiceProvider).signOut();
+      final user = await ref.read(authServiceProvider).initialize();
+      ref.read(currentUserProvider.notifier).setUser(user);
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.genericError),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -189,13 +258,15 @@ class _MenuCard extends StatelessWidget {
                     title,
                     style: theme.textTheme.bodyLarge,
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

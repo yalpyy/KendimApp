@@ -16,6 +16,7 @@ class DemoAuthRepository implements AuthRepository {
     displayName: 'Demo',
     isAnonymous: false,
     emailVerified: true,
+    isAdmin: true,
   );
 
   final _controller = StreamController<UserEntity?>.broadcast();
@@ -45,6 +46,9 @@ class DemoAuthRepository implements AuthRepository {
 
   @override
   Future<void> migrateAnonymousData(String oldUserId, String newUserId) async {}
+
+  @override
+  Future<void> deleteAccount(String userId) async {}
 
   @override
   Future<void> signOut() async {}

@@ -52,6 +52,9 @@ class AppLocalizations {
       'menu_account_subtitle_auth': 'Hesap bilgilerini gör.',
       'menu_language_title': 'Dil',
       'menu_about_title': 'Hakkında',
+      'menu_login': 'Giriş Yap',
+      'menu_logout': 'Çıkış Yap',
+      'menu_admin': 'Admin Paneli',
 
       // Premium
       'premium_title': 'Derinlik',
@@ -156,6 +159,19 @@ class AppLocalizations {
       'settings_title': 'Ayarlar',
       'restore_purchase': 'Satın almayı geri yükle',
 
+      // Admin
+      'admin_title': 'Admin Paneli',
+      'admin_stats_title': 'İstatistikler',
+      'admin_total_users': 'Toplam Kullanıcı',
+      'admin_premium_users': 'Premium Kullanıcı',
+      'admin_total_entries': 'Toplam Yazı',
+      'admin_total_reflections': 'Toplam Yansıma',
+      'admin_users_title': 'Kullanıcılar',
+      'admin_premium_badge': 'Premium',
+      'admin_free_badge': 'Ücretsiz',
+      'admin_admin_badge': 'Admin',
+      'admin_no_users': 'Henüz kullanıcı yok.',
+
       // Errors
       'generic_error': 'Bir şeyler ters gitti. Tekrar dene.',
       'email_required': 'E-posta gerekli.',
@@ -192,6 +208,9 @@ class AppLocalizations {
       'menu_account_subtitle_auth': 'View account details.',
       'menu_language_title': 'Language',
       'menu_about_title': 'About',
+      'menu_login': 'Sign In',
+      'menu_logout': 'Sign Out',
+      'menu_admin': 'Admin Panel',
 
       // Premium
       'premium_title': 'Depth',
@@ -296,6 +315,19 @@ class AppLocalizations {
       'settings_title': 'Settings',
       'restore_purchase': 'Restore purchase',
 
+      // Admin
+      'admin_title': 'Admin Panel',
+      'admin_stats_title': 'Statistics',
+      'admin_total_users': 'Total Users',
+      'admin_premium_users': 'Premium Users',
+      'admin_total_entries': 'Total Entries',
+      'admin_total_reflections': 'Total Reflections',
+      'admin_users_title': 'Users',
+      'admin_premium_badge': 'Premium',
+      'admin_free_badge': 'Free',
+      'admin_admin_badge': 'Admin',
+      'admin_no_users': 'No users yet.',
+
       // Errors
       'generic_error': 'Something went wrong. Try again.',
       'email_required': 'Email is required.',
@@ -336,6 +368,9 @@ class AppLocalizations {
   String get menuAccountSubtitleAuth => _get('menu_account_subtitle_auth');
   String get menuLanguageTitle => _get('menu_language_title');
   String get menuAboutTitle => _get('menu_about_title');
+  String get menuLogin => _get('menu_login');
+  String get menuLogout => _get('menu_logout');
+  String get menuAdmin => _get('menu_admin');
 
   // Premium
   String get premiumTitle => _get('premium_title');
@@ -415,6 +450,19 @@ class AppLocalizations {
   // Settings
   String get settingsTitle => _get('settings_title');
   String get restorePurchase => _get('restore_purchase');
+
+  // Admin
+  String get adminTitle => _get('admin_title');
+  String get adminStatsTitle => _get('admin_stats_title');
+  String get adminTotalUsers => _get('admin_total_users');
+  String get adminPremiumUsers => _get('admin_premium_users');
+  String get adminTotalEntries => _get('admin_total_entries');
+  String get adminTotalReflections => _get('admin_total_reflections');
+  String get adminUsersTitle => _get('admin_users_title');
+  String get adminPremiumBadge => _get('admin_premium_badge');
+  String get adminFreeBadge => _get('admin_free_badge');
+  String get adminAdminBadge => _get('admin_admin_badge');
+  String get adminNoUsers => _get('admin_no_users');
 
   // Errors
   String get genericError => _get('generic_error');
