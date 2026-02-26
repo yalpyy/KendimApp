@@ -245,8 +245,8 @@ class _StatCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity(0.2)
-                : AppColors.lightDivider.withOpacity(0.5),
+                ? Colors.black.withValues(alpha:0.2)
+                : AppColors.lightDivider.withValues(alpha:0.5),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -371,7 +371,7 @@ class _Badge extends StatelessWidget {
         vertical: 2,
       ),
       decoration: BoxDecoration(
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha:0.5)),
         borderRadius: BorderRadius.circular(AppSpacing.xs),
       ),
       child: Text(

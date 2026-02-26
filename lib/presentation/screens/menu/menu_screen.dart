@@ -239,10 +239,9 @@ class _MenuCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           boxShadow: [
             BoxShadow(
-              // ignore: deprecated_member_use
               color: isDark
-                  ? Colors.black.withOpacity(0.2)
-                  : AppColors.lightDivider.withOpacity(0.5),
+                  ? Colors.black.withValues(alpha: 0.2)
+                  : AppColors.lightDivider.withValues(alpha: 0.5),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
