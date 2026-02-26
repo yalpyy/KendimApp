@@ -5,24 +5,89 @@
 -- Prerequisites:
 --   1. Run 001_initial_schema.sql first
 --   2. Run 002_add_admin_and_display_name.sql
---   3. Create a test user in Supabase Auth:
---      Email: admin@kendin.app  Password: Test123456
---      (use Supabase Dashboard → Authentication → Create User)
---   4. Copy the auth user UUID and replace the placeholder below.
 --
--- After creating the auth user, replace this UUID:
+-- This script creates a test user in auth.users first,
+-- then populates public.users, entries, and reflections.
+-- Run in Supabase SQL Editor (it has service_role access).
 -- ───────────────────────────────────────────────────────
 
--- STEP 1: Set the test user UUID here
--- Replace 'YOUR_AUTH_USER_UUID_HERE' with the actual UUID from Supabase Auth.
 DO $$
 DECLARE
-  test_user_id uuid := 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'; -- REPLACE THIS
+  test_user_id uuid;
+  test_email text := 'admin@kendin.app';
+  test_password text := 'Test123456';
   week1_start date;
   week2_start date;
   week3_start date;
   current_week_start date;
 BEGIN
+
+  -- ─── STEP 1: Create auth user ─────────────────────
+  -- Check if user already exists in auth.users
+  SELECT id INTO test_user_id
+  FROM auth.users
+  WHERE email = test_email;
+
+  IF test_user_id IS NULL THEN
+    -- Generate a UUID for the new user
+    test_user_id := gen_random_uuid();
+
+    -- Insert directly into auth.users (requires service_role / SQL Editor)
+    INSERT INTO auth.users (
+      id,
+      instance_id,
+      aud,
+      role,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at,
+      confirmation_token,
+      recovery_token
+    ) VALUES (
+      test_user_id,
+      '00000000-0000-0000-0000-000000000000',
+      'authenticated',
+      'authenticated',
+      test_email,
+      crypt(test_password, gen_salt('bf')),
+      now(),
+      '{"provider":"email","providers":["email"]}'::jsonb,
+      '{"display_name":"Test Admin"}'::jsonb,
+      now() - interval '30 days',
+      now(),
+      '',
+      ''
+    );
+
+    -- Also insert into auth.identities (required for email login)
+    INSERT INTO auth.identities (
+      id,
+      user_id,
+      provider_id,
+      identity_data,
+      provider,
+      last_sign_in_at,
+      created_at,
+      updated_at
+    ) VALUES (
+      test_user_id,
+      test_user_id,
+      test_email,
+      jsonb_build_object('sub', test_user_id::text, 'email', test_email),
+      'email',
+      now(),
+      now() - interval '30 days',
+      now()
+    );
+
+    RAISE NOTICE 'Auth user created: % (%)', test_email, test_user_id;
+  ELSE
+    RAISE NOTICE 'Auth user already exists: % (%)', test_email, test_user_id;
+  END IF;
 
   -- ─── Calculate week starts (Monday-based) ─────────
   current_week_start := date_trunc('week', current_date)::date;
@@ -30,7 +95,7 @@ BEGIN
   week2_start := current_week_start - interval '14 days'; -- 2 weeks ago
   week3_start := current_week_start - interval '7 days';  -- 1 week ago
 
-  -- ─── STEP 2: Create user row ──────────────────────
+  -- ─── STEP 2: Create public.users row ──────────────
   INSERT INTO public.users (id, is_premium, is_admin, premium_miss_tokens, display_name, created_at, updated_at)
   VALUES (
     test_user_id,
@@ -200,7 +265,7 @@ BEGIN
     'bir kahve, bir yürüyüş, bir telefon. Perşembe günü yazdığın "vakit ayıramadım ama fark ettim" '
     'cümlesi belki de haftanın en güçlü cümlesi. Farkındalık her zaman eylemde değil, '
     'bazen duraksadığında da ortaya çıkıyor.',
-    true,  -- archived
+    true,
     (week1_start + 6) + time '12:00'
   )
   ON CONFLICT (user_id, week_start_date) DO NOTHING;
@@ -215,7 +280,7 @@ BEGIN
     'Perşembe günü yazmamış olman, belki de o gün kendine başka bir şekilde vakit ayırdığının işareti. '
     'Doğada vakit geçirme sözün dikkat çekici — kendine verdiğin sözler, '
     'genellikle neye ihtiyacın olduğunu zaten bildiğini gösteriyor.',
-    true,  -- archived
+    true,
     (week2_start + 6) + time '12:00'
   )
   ON CONFLICT (user_id, week_start_date) DO NOTHING;
@@ -232,18 +297,16 @@ BEGIN
     'Cumartesi günü "akışına bıraktım" yazman, belki de haftanın özeti: '
     'kontrol etmeden, planlamadan, sadece olmak. Bu haftanın en güzel yanı, '
     'her günün biraz daha bilinçli geçmiş olması.',
-    false,  -- not archived (current week)
+    false,
     (week3_start + 6) + time '12:00'
   )
   ON CONFLICT (user_id, week_start_date) DO NOTHING;
 
-  RAISE NOTICE 'Mock data inserted for user %', test_user_id;
+  RAISE NOTICE '──────────────────────────────────────────';
+  RAISE NOTICE 'Mock data inserted successfully!';
+  RAISE NOTICE 'User ID: %', test_user_id;
+  RAISE NOTICE 'Email: %', test_email;
+  RAISE NOTICE 'Password: %', test_password;
+  RAISE NOTICE '──────────────────────────────────────────';
 
 END $$;
-
--- ─── QUICK VERIFICATION ──────────────────────────────
--- Run these queries to verify the data:
---
--- SELECT * FROM public.users WHERE display_name = 'Test Admin';
--- SELECT count(*) FROM public.entries WHERE user_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
--- SELECT * FROM public.weekly_reflections WHERE user_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
