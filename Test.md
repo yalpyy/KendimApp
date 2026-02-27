@@ -1,38 +1,50 @@
 # Kendin App — Test Raporu
 
+## Proje Mimari Ozeti
+
+- **State Management:** Flutter Riverpod (StateNotifier)
+- **Auth State:** `currentUserProvider` → tek kaynak (duplicate yok)
+- **Auth Chain:** `AuthDatasource → AuthRepositoryImpl → AuthService → CurrentUserNotifier`
+- **Navigation:** `Navigator.push(MaterialPageRoute(...))` — GoRouter kullanilmiyor (pubspec'te var ama bagli degil)
+- **Backend:** Supabase (auth + PostgreSQL + Edge Functions)
+- **Lokalizasyon:** TR + EN (`AppLocalizations`)
+
+---
+
 ## Yapilan Isler
 
-### 1. Ayarlar (Menu) Sayfasi
+### 1. Ayarlar (Menu) Sayfasi — YENIDEN YAZILDI
 - **Dosya:** `lib/presentation/screens/menu/menu_screen.dart`
 - **Durum:** TAMAMLANDI
-- Ust kisim: Kullanici adi (buyuk) + hesap durumu (Free/Premium)
-- 3 kart: **Derinlik**, **Dil**, **Hakkinda**
-- Alt kisim: **Giris Yap** (anonim) / **Cikis Yap** (kayitli)
-- Admin kullanicilara ozel: **Admin Paneli** karti
-- Navigation: HomeScreen > Menu ikon (sag ust `...`) > MenuScreen
+- **Yeni Ozellikler:**
+  - **Kullanici Bilgi Karti:** User ID (kopyala butonu), E-posta, Hesap tipi (Anonim/Kayitli), Premium durumu, Admin badge
+  - **3 kart:** Derinlik, Dil, Hakkinda
+  - **Admin karti:** Sadece `is_admin = true` kullanicilara gorunur
+  - **Giris Yap butonu:** Anonim kullanicilar icin (OutlinedButton)
+  - **Cikis Yap butonu:** Kayitli kullanicilar icin (OutlinedButton)
+  - **Debug Bolumu:** Acilir/kapanir — Supabase session JSON, token expiry, user metadata
+- **Navigation:** HomeScreen > Menu ikon (sag ust `...`) > MenuScreen
 
-### 2. Admin Paneli
-- **Dosya:** `lib/presentation/screens/admin/admin_screen.dart` (YENI)
+### 2. Admin Paneli — GUNCELENDI
+- **Dosya:** `lib/presentation/screens/admin/admin_screen.dart`
 - **Durum:** TAMAMLANDI
-- 4 istatistik karti: Toplam Kullanici, Premium Kullanici, Toplam Yazi, Toplam Yansima
-- Kullanici listesi: Isim + tarih + Premium/Admin/Ucretsiz badge
-- Pull-to-refresh + yenile butonu
-- Sadece `is_admin = true` kullanicilara gorunur
-- TR/EN lokalizasyon tam
+- **Ozellikler:**
+  - 4 istatistik karti: Toplam Kullanici, Premium Kullanici, Toplam Yazi, Toplam Yansima
+  - Kullanici listesi: Isim + tarih + Premium/Admin/Ucretsiz badge
+  - **YENI: Yansimalar Debug Tablosu:** reflection_id, user_id, week_start, sentence_count, created_at, archived badge
+  - Pull-to-refresh + yenile butonu
+  - Sadece `is_admin = true` kullanicilara gorunur
 
 ### 3. Admin Data Modeli
-- **UserEntity:** `isAdmin` field eklendi
+- **UserEntity:** `isAdmin` field
 - **UserModel:** `is_admin` JSON alanini okuyor
-- **AuthDatasource:** `getAdminStats()` + `getAllUsers()` metodlari eklendi
+- **AuthDatasource:** `getAdminStats()` + `getAllUsers()` + `getAllReflections()` metodlari
 - **Migration:** `supabase/migrations/002_add_admin_and_display_name.sql`
-  - `is_admin boolean` kolonu
-  - `display_name text` kolonu
-  - Admin RLS politikalari (tum tablolari okuma izni)
 
 ### 4. Mock Test Verisi
 - **Dosya:** `supabase/seed_mock_data.sql`
 - **Durum:** TAMAMLANDI
-- `auth.users` + `auth.identities` satirlarini otomatik olusturur
+- `auth.users` + `auth.identities` satirlarini olusturur (FK fix)
 - Email: `admin@kendin.app` / Sifre: `Test123456`
 - 3 haftalik gunluk yazilar (18 entry)
 - 3 haftalik yansimalar (2 arsivli + 1 aktif)
@@ -41,41 +53,64 @@
 ### 5. Lokalizasyon
 - **Dosya:** `lib/core/l10n/app_localizations.dart`
 - TR + EN tam destek
-- Admin paneli icin 11 yeni key
+- Yeni key'ler: kullanici bilgi karti, debug bolumu, admin yansimalar tablosu
 
 ### 6. Onceki Commitlerde Yapilanlar
 - Turk dili input fix (`flutter_localizations`)
 - Anonim auth fix (`.maybeSingle()` + auto-upsert)
-- Strike noktalar fix
+- Strike noktalar fix + fade animasyonu
 - Menu, Derinlik, Hesap, Hakkinda, Legal sayfalari
 - 23:30 "Gun kapaniyor" banner
-- Strike nokta fade animasyonu
 - Hesap silme (full chain)
 - APPLE_STORE_PREP.md
 
 ---
 
-## Mevcut Sayfalar ve Durumu
+## Mimari Audit Sonuclari
+
+### Tek Kaynak Auth Sistemi (Duplicate YOK)
+- `CurrentUserNotifier` (StateNotifier) → `currentUserProvider`
+- Ayri AuthController/SessionProvider **yok**
+- Demo mod ayni interface'i kullaniyor (`DemoAuthRepository`)
+
+### GoRouter Durumu
+- `pubspec.yaml`'da `go_router: ^13.1.0` var ama **hicbir yerde kullanilmiyor**
+- Tum navigation `Navigator.of(context).push(MaterialPageRoute(...))`
+
+### Orphaned (Kullanilmayan) Ekranlar
+| Ekran | Dosya | Durum |
+|-------|-------|-------|
+| SettingsScreen | `settings/settings_screen.dart` | ORPHANED — menu_screen ile degistirildi |
+| ProfileScreen | `profile/profile_screen.dart` | ORPHANED — menu_screen'e tasinmis |
+| SignupScreen | `auth/signup_screen.dart` | ORPHANED — login_screen icinde toggle var |
+
+### Router Akisi (Dogrulanmis)
+- Landing → `has_seen_landing` pref → tek sefer gosterilir
+- Landing → `pushReplacement` → HomeScreen (geri donus yok)
+- HomeScreen → Menu → LoginScreen → `popUntil(isFirst)` → HomeScreen
+- **Dongü yok, loop yok**
+
+---
+
+## Aktif Sayfalar ve Durumu
 
 | Sayfa | Dosya | Durum |
 |-------|-------|-------|
 | Landing | `screens/landing/landing_screen.dart` | CALISIYOR |
 | Ana Sayfa (Home) | `screens/home/home_screen.dart` | CALISIYOR |
-| Ayarlar (Menu) | `screens/menu/menu_screen.dart` | CALISIYOR |
+| Ayarlar (Menu) | `screens/menu/menu_screen.dart` | CALISIYOR — kullanici bilgi + debug eklendi |
 | Derinlik (Premium) | `screens/premium/premium_paywall_screen.dart` | CALISIYOR |
 | Dil | `screens/language/language_screen.dart` | CALISIYOR |
 | Hakkinda | `screens/about/about_screen.dart` | CALISIYOR |
-| Admin Paneli | `screens/admin/admin_screen.dart` | CALISIYOR |
+| Admin Paneli | `screens/admin/admin_screen.dart` | CALISIYOR — yansimalar tablosu eklendi |
 | Giris Yap | `screens/auth/login_screen.dart` | CALISIYOR |
-| Kayit Ol | `screens/auth/signup_screen.dart` | CALISIYOR |
+| Kayit Ol | login_screen icinde toggle | CALISIYOR |
 | Email Dogrula | `screens/auth/verify_email_screen.dart` | CALISIYOR |
 | Hesap Gate | `screens/auth/account_gate_screen.dart` | CALISIYOR |
-| Profil | `screens/profile/profile_screen.dart` | CALISIYOR |
 | Yansima | `screens/reflection/reflection_screen.dart` | CALISIYOR |
 | Gizlilik Politikasi | `screens/legal/privacy_policy_screen.dart` | CALISIYOR |
 | Kullanim Kosullari | `screens/legal/terms_of_service_screen.dart` | CALISIYOR |
 | KVKK | `screens/legal/kvkk_screen.dart` | CALISIYOR |
-| Ayarlar (eski) | `screens/settings/settings_screen.dart` | KULLANILMIYOR (menu_screen ile degistirildi) |
 
 ---
 
@@ -84,31 +119,38 @@
 ```
 main.dart
   |
-  +-- LandingScreen (ilk acilis)
+  +-- LandingScreen (ilk acilis, tek sefer)
   |     |
-  |     +-- "Basla" --> HomeScreen
+  |     +-- "Basla" --> pushReplacement --> HomeScreen
   |
   +-- HomeScreen (ana ekran)
         |
         +-- Menu ikonu (...) --> MenuScreen
         |     |
+        |     +-- [Kullanici Bilgi Karti]
+        |     |     +-- User ID (kopyala butonu)
+        |     |     +-- Email
+        |     |     +-- Hesap Tipi (Anonim/Kayitli)
+        |     |     +-- Premium Durumu
+        |     |
         |     +-- Derinlik --> PremiumPaywallScreen
-        |     |     +-- Free: Paywall (fiyatlar + avantajlar)
-        |     |     +-- Premium: Timeline (yansimalar)
-        |     |
-        |     +-- Dil --> LanguageScreen (Turkce/English)
-        |     |
+        |     +-- Dil --> LanguageScreen
         |     +-- Hakkinda --> AboutScreen
-        |     |     +-- Gizlilik Politikasi
-        |     |     +-- Kullanim Kosullari
-        |     |     +-- KVKK
-        |     |
-        |     +-- Admin Paneli --> AdminScreen (sadece admin)
+        |     +-- Admin Paneli --> AdminScreen (admin only)
         |     |     +-- Istatistikler (4 kart)
         |     |     +-- Kullanici listesi
+        |     |     +-- Yansimalar debug tablosu
         |     |
         |     +-- Giris Yap --> LoginScreen (anonim ise)
-        |     +-- Cikis Yap (kayitli ise)
+        |     |     +-- Sign In / Sign Up toggle
+        |     |     +-- Basarili → popUntil(isFirst) → HomeScreen
+        |     |
+        |     +-- Cikis Yap → signOut → initialize → HomeScreen (kayitli ise)
+        |     |
+        |     +-- [Debug Bolumu] (acilir/kapanir)
+        |           +-- Token Expiry
+        |           +-- User Metadata JSON
+        |           +-- Session Summary JSON
         |
         +-- Pazar gunu --> ReflectionScreen
 ```
@@ -124,6 +166,8 @@ main.dart
 
 ### Build Komutu
 ```bash
+# ONEMLI: SUPABASE_URL ve SUPABASE_ANON_KEY olmadan Supabase calismaz!
+
 # Web build
 flutter build web --release --base-href "/KendimApp/" \
   --dart-define=SUPABASE_URL=https://XXXXX.supabase.co \
@@ -133,16 +177,21 @@ flutter build web --release --base-href "/KendimApp/" \
 flutter build ios --release \
   --dart-define=SUPABASE_URL=https://XXXXX.supabase.co \
   --dart-define=SUPABASE_ANON_KEY=eyJXXXXX
+
+# Gelistirme (debug)
+flutter run \
+  --dart-define=SUPABASE_URL=https://XXXXX.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=eyJXXXXX
 ```
 
-### Onemli: SUPABASE_URL ve SUPABASE_ANON_KEY
-- `--dart-define` olmadan build edersen Supabase baglantisi **bos** kalir
-- Uygulama acilir ama **auth basarisiz** olur, yazma calismaz
+### Supabase Baglantisi
+- `--dart-define` olmadan build edersen Supabase URL **bos** kalir
+- Uygulama acilir ama **auth basarisiz** olur, veri yazma calismaz
 - Supabase Dashboard > Settings > API > URL ve anon key
 
 ---
 
-## Bilinen Sorunlar / Kontrol Edilecekler
+## Bilinen Sorunlar / Yapilacaklar
 
 | # | Konu | Durum | Not |
 |---|------|-------|-----|
@@ -155,70 +204,5 @@ flutter build ios --release \
 | 7 | `migrate-user-data` edge function | YAPILACAK | Anonim -> email gecis icin |
 | 8 | IAP (In-App Purchase) | YAPILACAK | App Store Connect'te urun tanimla |
 | 9 | Push notifications | YAPILACAK | iOS permission + APN sertifikasi |
-
----
-
-## Dosya Yapisi
-
-```
-lib/
-├── app_init/
-│   ├── app_init_demo.dart          (web init)
-│   └── app_init_production.dart    (native init)
-├── core/
-│   ├── constants/
-│   │   ├── app_config.dart
-│   │   ├── app_constants.dart      (Supabase URL/KEY --dart-define)
-│   │   └── app_strings.dart        (eski statik Turkce stringler)
-│   ├── errors/app_exception.dart
-│   ├── l10n/app_localizations.dart (TR + EN lokalizasyon)
-│   ├── theme/                      (renk, spacing, tema)
-│   └── utils/date_utils.dart
-├── data/
-│   ├── datasources/
-│   │   ├── auth_datasource.dart    (Supabase auth + admin queries)
-│   │   ├── entry_datasource.dart
-│   │   ├── reflection_datasource.dart
-│   │   ├── supabase_client_setup.dart
-│   │   └── demo/                   (web demo implementations)
-│   ├── models/
-│   │   ├── entry_model.dart
-│   │   ├── user_model.dart         (isAdmin eklendi)
-│   │   └── weekly_reflection_model.dart
-│   └── repositories/
-├── domain/
-│   ├── entities/
-│   │   ├── entry_entity.dart
-│   │   ├── user_entity.dart        (isAdmin eklendi)
-│   │   └── weekly_reflection_entity.dart
-│   ├── repositories/
-│   └── usecases/
-├── main.dart
-└── presentation/
-    ├── providers/
-    │   ├── locale_provider.dart
-    │   ├── providers.dart          (conditional import)
-    │   ├── providers_demo.dart     (web)
-    │   └── providers_production.dart (native)
-    ├── screens/
-    │   ├── about/about_screen.dart
-    │   ├── admin/admin_screen.dart  (YENI)
-    │   ├── auth/
-    │   │   ├── account_gate_screen.dart
-    │   │   ├── login_screen.dart
-    │   │   ├── signup_screen.dart
-    │   │   └── verify_email_screen.dart
-    │   ├── home/home_screen.dart
-    │   ├── landing/landing_screen.dart
-    │   ├── language/language_screen.dart
-    │   ├── legal/
-    │   │   ├── kvkk_screen.dart
-    │   │   ├── privacy_policy_screen.dart
-    │   │   └── terms_of_service_screen.dart
-    │   ├── menu/menu_screen.dart    (YENIDEN YAZILDI)
-    │   ├── premium/premium_paywall_screen.dart
-    │   ├── profile/profile_screen.dart
-    │   ├── reflection/reflection_screen.dart
-    │   └── settings/settings_screen.dart (kullanilmiyor)
-    └── widgets/
-```
+| 10 | GoRouter kaldir veya bagla | ONERILIR | pubspec'te var ama kullanilmiyor |
+| 11 | Orphaned ekranlari temizle | ONERILIR | settings_screen, profile_screen, signup_screen |

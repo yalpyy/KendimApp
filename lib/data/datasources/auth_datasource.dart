@@ -248,6 +248,19 @@ class AuthDatasource {
     }
   }
 
+  /// Returns all reflections (for admin debug view).
+  Future<List<Map<String, dynamic>>> getAllReflections() async {
+    try {
+      final data = await _client
+          .from('weekly_reflections')
+          .select()
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      throw AuthException('Failed to fetch reflections: $e');
+    }
+  }
+
   /// Signs out.
   Future<void> signOut() async {
     await _auth.signOut();

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_colors.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
-import 'package:kendin/data/datasources/auth_datasource.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 
 /// Admin panel — visible only to users with is_admin = true.
@@ -12,6 +12,7 @@ import 'package:kendin/presentation/providers/providers.dart';
 /// Shows:
 /// - App statistics (total users, premium users, entries, reflections)
 /// - User list with premium/admin badges
+/// - Reflections debug table (reflection_id, user_id, week_start, sentence_count, created_at)
 class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key});
 
@@ -22,6 +23,7 @@ class AdminScreen extends ConsumerStatefulWidget {
 class _AdminScreenState extends ConsumerState<AdminScreen> {
   Map<String, int>? _stats;
   List<Map<String, dynamic>>? _users;
+  List<Map<String, dynamic>>? _reflections;
   bool _isLoading = true;
   String? _error;
 
@@ -42,11 +44,13 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       final results = await Future.wait([
         datasource.getAdminStats(),
         datasource.getAllUsers(),
+        datasource.getAllReflections(),
       ]);
 
       setState(() {
         _stats = results[0] as Map<String, int>;
         _users = results[1] as List<Map<String, dynamic>>;
+        _reflections = results[2] as List<Map<String, dynamic>>;
         _isLoading = false;
       });
     } catch (e) {
@@ -112,8 +116,11 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  l10n.genericError,
-                                  style: theme.textTheme.bodyMedium,
+                                  _error!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.error,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: AppSpacing.md),
                                 TextButton(
@@ -148,6 +155,16 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                               ),
                               const SizedBox(height: AppSpacing.md),
                               _buildUsersList(context),
+
+                              const SizedBox(height: AppSpacing.xxl),
+
+                              // ─── Reflections debug table ────────
+                              Text(
+                                l10n.adminReflectionsTitle,
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              _buildReflectionsTable(context),
 
                               const SizedBox(height: AppSpacing.xxl),
                             ],
@@ -222,6 +239,36 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       },
     );
   }
+
+  Widget _buildReflectionsTable(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final reflections = _reflections ?? [];
+
+    if (reflections.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xxl),
+          child: Text(
+            l10n.adminNoReflectionsDebug,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: reflections.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        return _ReflectionTile(reflection: reflections[index]);
+      },
+    );
+  }
 }
 
 // ─── Stat Card ──────────────────────────────────────
@@ -245,8 +292,8 @@ class _StatCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha:0.2)
-                : AppColors.lightDivider.withValues(alpha:0.5),
+                ? Colors.black.withValues(alpha: 0.2)
+                : AppColors.lightDivider.withValues(alpha: 0.5),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -357,6 +404,105 @@ class _UserTile extends StatelessWidget {
   }
 }
 
+// ─── Reflection Tile ────────────────────────────────
+
+class _ReflectionTile extends StatelessWidget {
+  const _ReflectionTile({required this.reflection});
+
+  final Map<String, dynamic> reflection;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    final id = reflection['id'] as String? ?? '';
+    final userId = reflection['user_id'] as String? ?? '';
+    final weekStart = reflection['week_start'] as String? ?? '';
+    final content = reflection['content'] as String? ?? '';
+    final createdAt = reflection['created_at'] as String? ?? '';
+    final isArchived = reflection['is_archived'] as bool? ?? false;
+
+    // Count sentences (rough: split by period)
+    final sentenceCount =
+        content.isNotEmpty ? content.split(RegExp(r'[.!?]+')).where((s) => s.trim().isNotEmpty).length : 0;
+
+    String formatDate(String raw) {
+      if (raw.isEmpty) return '-';
+      try {
+        final dt = DateTime.parse(raw);
+        return '${dt.day.toString().padLeft(2, '0')}.'
+            '${dt.month.toString().padLeft(2, '0')}.'
+            '${dt.year}';
+      } catch (_) {
+        return raw;
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: reflection_id (truncated) + archived badge
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: id));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('ID copied'),
+                        behavior: SnackBarBehavior.floating,
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'ID: ${id.length > 8 ? '${id.substring(0, 8)}...' : id}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ),
+              if (isArchived)
+                _Badge(
+                  label: 'Archived',
+                  color: theme.colorScheme.tertiary,
+                ),
+            ],
+          ),
+          const SizedBox(height: 2),
+
+          // Row 2: user_id
+          Text(
+            'user: ${userId.length > 8 ? '${userId.substring(0, 8)}...' : userId}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontFamily: 'monospace',
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 2),
+
+          // Row 3: week_start + sentence_count + created_at
+          Text(
+            'week: ${formatDate(weekStart)}  |  sentences: $sentenceCount  |  ${formatDate(createdAt)}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Badge ──────────────────────────────────────────
+
 class _Badge extends StatelessWidget {
   const _Badge({required this.label, required this.color});
 
@@ -371,7 +517,7 @@ class _Badge extends StatelessWidget {
         vertical: 2,
       ),
       decoration: BoxDecoration(
-        border: Border.all(color: color.withValues(alpha:0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
         borderRadius: BorderRadius.circular(AppSpacing.xs),
       ),
       child: Text(
