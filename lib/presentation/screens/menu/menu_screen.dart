@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 import 'package:kendin/core/l10n/app_localizations.dart';
+import 'package:kendin/domain/entities/user_entity.dart';
 import 'package:kendin/core/theme/app_colors.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/data/datasources/supabase_client_setup.dart';
@@ -65,11 +66,12 @@ class MenuScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        user.isPremium
-                            ? l10n.profilePremium
-                            : l10n.profileFree,
+                        _membershipLabel(user.membershipStatus, l10n),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                          color: user.membershipStatus ==
+                                  MembershipStatus.expired
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.lg),
@@ -247,6 +249,17 @@ class MenuScreen extends ConsumerWidget {
     );
   }
 
+  String _membershipLabel(MembershipStatus status, AppLocalizations l10n) {
+    switch (status) {
+      case MembershipStatus.free:
+        return l10n.membershipFree;
+      case MembershipStatus.premium:
+        return l10n.membershipPremium;
+      case MembershipStatus.expired:
+        return l10n.membershipExpired;
+    }
+  }
+
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     try {
       await ref.read(authServiceProvider).signOut();
@@ -358,10 +371,10 @@ class _UserInfoCard extends StatelessWidget {
 
           const Divider(height: AppSpacing.md),
 
-          // Premium status
+          // Membership status
           _InfoRow(
             label: l10n.menuUserPremiumStatus,
-            value: isPremium ? l10n.profilePremium : l10n.profileFree,
+            value: isPremium ? l10n.membershipPremium : l10n.membershipFree,
             valueColor: isPremium ? theme.colorScheme.primary : null,
           ),
 

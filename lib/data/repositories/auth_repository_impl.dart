@@ -29,6 +29,9 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<bool> isEmailVerified() => _datasource.isEmailVerified();
 
   @override
+  Future<void> resetPassword(String email) => _datasource.resetPassword(email);
+
+  @override
   Future<void> migrateAnonymousData(String oldUserId, String newUserId) =>
       _datasource.migrateAnonymousData(oldUserId, newUserId);
 

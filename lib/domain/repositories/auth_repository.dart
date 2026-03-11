@@ -20,6 +20,9 @@ abstract class AuthRepository {
   /// Returns true if the user's email is verified.
   Future<bool> isEmailVerified();
 
+  /// Sends a password reset email via Supabase Auth.
+  Future<void> resetPassword(String email);
+
   /// Migrates data from anonymous account to the new email account.
   /// Calls the migrate-user-data edge function.
   Future<void> migrateAnonymousData(String oldUserId, String newUserId);

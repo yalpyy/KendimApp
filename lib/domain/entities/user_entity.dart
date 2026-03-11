@@ -1,3 +1,15 @@
+/// Membership status derived from is_premium + premium_expires_at.
+enum MembershipStatus {
+  /// No premium subscription.
+  free,
+
+  /// Active premium subscription.
+  premium,
+
+  /// Premium subscription has expired.
+  expired,
+}
+
 class UserEntity {
   const UserEntity({
     required this.id,
@@ -8,6 +20,8 @@ class UserEntity {
     this.isAnonymous = true,
     this.emailVerified = false,
     this.isAdmin = false,
+    this.premiumExpiresAt,
+    this.premiumStartedAt,
   });
 
   final String id;
@@ -18,6 +32,21 @@ class UserEntity {
   final bool isAnonymous;
   final bool emailVerified;
   final bool isAdmin;
+  final DateTime? premiumExpiresAt;
+  final DateTime? premiumStartedAt;
+
+  /// Computed membership status based on is_premium + expiry date.
+  MembershipStatus get membershipStatus {
+    if (!isPremium) return MembershipStatus.free;
+    if (premiumExpiresAt == null) return MembershipStatus.premium; // lifetime
+    if (premiumExpiresAt!.isAfter(DateTime.now())) {
+      return MembershipStatus.premium;
+    }
+    return MembershipStatus.expired;
+  }
+
+  /// Whether premium features should be accessible right now.
+  bool get hasPremiumAccess => membershipStatus == MembershipStatus.premium;
 
   UserEntity copyWith({
     String? id,
@@ -28,6 +57,8 @@ class UserEntity {
     bool? isAnonymous,
     bool? emailVerified,
     bool? isAdmin,
+    DateTime? premiumExpiresAt,
+    DateTime? premiumStartedAt,
   }) {
     return UserEntity(
       id: id ?? this.id,
@@ -38,6 +69,8 @@ class UserEntity {
       isAnonymous: isAnonymous ?? this.isAnonymous,
       emailVerified: emailVerified ?? this.emailVerified,
       isAdmin: isAdmin ?? this.isAdmin,
+      premiumExpiresAt: premiumExpiresAt ?? this.premiumExpiresAt,
+      premiumStartedAt: premiumStartedAt ?? this.premiumStartedAt,
     );
   }
 }

@@ -102,6 +102,9 @@ class AuthDatasource {
         'display_name': displayName,
       }).eq('id', user.id);
 
+      // Send welcome email via Resend (fire-and-forget, non-blocking).
+      _sendEmail('welcome', user.email ?? email, displayName);
+
       return UserModel(
         id: user.id,
         isPremium: false,
@@ -156,6 +159,15 @@ class AuthDatasource {
       return user?.emailConfirmedAt != null;
     } catch (e) {
       return false;
+    }
+  }
+
+  /// Sends a password reset email via Supabase Auth.
+  Future<void> resetPassword(String email) async {
+    try {
+      await _auth.resetPasswordForEmail(email);
+    } catch (e) {
+      throw AuthException('Password reset failed: $e');
     }
   }
 
@@ -275,6 +287,22 @@ class AuthDatasource {
   }
 
   // ─── Helpers ─────────────────────────────────────
+
+  /// Sends a transactional email via the send-email edge function.
+  /// Fire-and-forget — does not throw on failure.
+  void _sendEmail(String emailType, String toEmail, String? toName) {
+    _client.functions
+        .invoke(
+          'send-email',
+          body: {
+            'email_type': emailType,
+            'to_email': toEmail,
+            'to_name': toName,
+          },
+        )
+        .then((_) => debugPrint('[AuthDatasource] Email sent: $emailType → $toEmail'))
+        .catchError((e) => debugPrint('[AuthDatasource] Email send failed: $e'));
+  }
 
   UserModel _userFromSession(AuthResponse response) {
     final user = response.user;

@@ -100,6 +100,26 @@ class AppLocalizations {
       'terms_of_service': 'Kullanım Koşulları',
       'kvkk_notice': 'KVKK Aydınlatma Metni',
 
+      // Forgot password
+      'forgot_password': 'Şifremi unuttum',
+      'forgot_password_title': 'Şifre Sıfırla',
+      'forgot_password_subtitle':
+          'E-posta adresini gir, sıfırlama bağlantısı gönderelim.',
+      'forgot_password_button': 'Sıfırlama bağlantısı gönder',
+      'forgot_password_sent':
+          'Sıfırlama bağlantısı gönderildi. E-postanı kontrol et.',
+      'forgot_password_back': 'Giriş ekranına dön',
+
+      // Membership
+      'membership_free': 'Ücretsiz',
+      'membership_premium': 'Premium',
+      'membership_expired': 'Süresi Dolmuş',
+      'membership_renew': 'Yenile',
+
+      // Landing auth
+      'landing_login': 'Giriş Yap',
+      'landing_signup': 'Kayıt Ol',
+
       // Profile
       'profile_title': 'Profil',
       'profile_free': 'Ücretsiz',
@@ -274,6 +294,26 @@ class AppLocalizations {
       'terms_of_service': 'Terms of Service',
       'kvkk_notice': 'KVKK Disclosure',
 
+      // Forgot password
+      'forgot_password': 'Forgot password',
+      'forgot_password_title': 'Reset Password',
+      'forgot_password_subtitle':
+          'Enter your email and we\'ll send you a reset link.',
+      'forgot_password_button': 'Send reset link',
+      'forgot_password_sent':
+          'Reset link sent. Check your email.',
+      'forgot_password_back': 'Back to sign in',
+
+      // Membership
+      'membership_free': 'Free',
+      'membership_premium': 'Premium',
+      'membership_expired': 'Expired',
+      'membership_renew': 'Renew',
+
+      // Landing auth
+      'landing_login': 'Sign In',
+      'landing_signup': 'Sign Up',
+
       // Profile
       'profile_title': 'Profile',
       'profile_free': 'Free',
@@ -445,6 +485,24 @@ class AppLocalizations {
   String get privacyPolicy => _get('privacy_policy');
   String get termsOfService => _get('terms_of_service');
   String get kvkkNotice => _get('kvkk_notice');
+
+  // Forgot password
+  String get forgotPassword => _get('forgot_password');
+  String get forgotPasswordTitle => _get('forgot_password_title');
+  String get forgotPasswordSubtitle => _get('forgot_password_subtitle');
+  String get forgotPasswordButton => _get('forgot_password_button');
+  String get forgotPasswordSent => _get('forgot_password_sent');
+  String get forgotPasswordBack => _get('forgot_password_back');
+
+  // Membership
+  String get membershipFree => _get('membership_free');
+  String get membershipPremium => _get('membership_premium');
+  String get membershipExpired => _get('membership_expired');
+  String get membershipRenew => _get('membership_renew');
+
+  // Landing auth
+  String get landingLogin => _get('landing_login');
+  String get landingSignup => _get('landing_signup');
 
   // Profile
   String get profileTitle => _get('profile_title');
