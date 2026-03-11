@@ -314,8 +314,8 @@ class _UserInfoCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withValues(alpha: 0.2)
-                : AppColors.lightDivider.withValues(alpha: 0.5),
+                ? Colors.black.withOpacity( 0.2)
+                : AppColors.lightDivider.withOpacity( 0.5),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -626,8 +626,8 @@ class _MenuCard extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: isDark
-                  ? Colors.black.withValues(alpha: 0.2)
-                  : AppColors.lightDivider.withValues(alpha: 0.5),
+                  ? Colors.black.withOpacity( 0.2)
+                  : AppColors.lightDivider.withOpacity( 0.5),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
