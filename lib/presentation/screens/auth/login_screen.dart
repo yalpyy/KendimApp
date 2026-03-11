@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
+import 'package:kendin/presentation/screens/auth/forgot_password_screen.dart';
 import 'package:kendin/presentation/screens/auth/verify_email_screen.dart';
 import 'package:kendin/presentation/screens/legal/privacy_policy_screen.dart';
 import 'package:kendin/presentation/screens/legal/terms_of_service_screen.dart';
@@ -109,6 +110,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   obscureText: true,
                   decoration: InputDecoration(hintText: l10n.passwordHint),
                 ),
+
+                // Forgot password (sign-in only)
+                if (!_isSignUp)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ForgotPasswordScreen(
+                            initialEmail: _emailController.text.trim(),
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.forgotPassword,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // Legal acceptance (sign-up only)
                 if (_isSignUp) ...[

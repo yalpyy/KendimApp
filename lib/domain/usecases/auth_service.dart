@@ -38,6 +38,10 @@ class AuthService {
   /// Checks if email is verified.
   Future<bool> isEmailVerified() => _repository.isEmailVerified();
 
+  /// Sends a password reset email via Supabase Auth.
+  Future<void> resetPassword(String email) =>
+      _repository.resetPassword(email);
+
   /// Migrates anonymous user data to the new email account.
   Future<void> migrateAnonymousData(String oldUserId, String newUserId) =>
       _repository.migrateAnonymousData(oldUserId, newUserId);

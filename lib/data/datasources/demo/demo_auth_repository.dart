@@ -45,6 +45,9 @@ class DemoAuthRepository implements AuthRepository {
   Future<bool> isEmailVerified() async => true;
 
   @override
+  Future<void> resetPassword(String email) async {}
+
+  @override
   Future<void> migrateAnonymousData(String oldUserId, String newUserId) async {}
 
   @override

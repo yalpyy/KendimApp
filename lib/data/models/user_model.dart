@@ -10,6 +10,8 @@ class UserModel extends UserEntity {
     super.isAnonymous,
     super.emailVerified,
     super.isAdmin,
+    super.premiumExpiresAt,
+    super.premiumStartedAt,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,12 @@ class UserModel extends UserEntity {
       isAnonymous: json['is_anonymous'] as bool? ?? true,
       emailVerified: json['email_verified'] as bool? ?? false,
       isAdmin: json['is_admin'] as bool? ?? false,
+      premiumExpiresAt: json['premium_expires_at'] != null
+          ? DateTime.tryParse(json['premium_expires_at'] as String)
+          : null,
+      premiumStartedAt: json['premium_started_at'] != null
+          ? DateTime.tryParse(json['premium_started_at'] as String)
+          : null,
     );
   }
 
