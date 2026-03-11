@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import 'package:kendin/core/constants/app_constants.dart';
@@ -107,7 +107,7 @@ class PremiumService {
         body: {
           'user_id': userId,
           'receipt': purchase.verificationData.serverVerificationData,
-          'source': Platform.isIOS ? 'apple' : 'google',
+          'source': defaultTargetPlatform == TargetPlatform.iOS ? 'apple' : 'google',
           'product_id': purchase.productID,
         },
       );
