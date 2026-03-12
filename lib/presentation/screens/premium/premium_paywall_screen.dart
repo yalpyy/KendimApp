@@ -9,7 +9,6 @@ import 'package:kendin/domain/entities/weekly_reflection_entity.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 import 'package:kendin/presentation/screens/auth/login_screen.dart';
 import 'package:kendin/presentation/screens/auth/verify_email_screen.dart';
-import 'package:kendin/presentation/screens/reflection/reflection_screen.dart';
 
 /// Derinlik screen.
 ///
@@ -344,11 +343,7 @@ class _PremiumTimeline extends ConsumerWidget {
                   return _TimelineItem(
                     reflection: reflection,
                     isLast: index == all.length - 1,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ReflectionScreen(),
-                      ),
-                    ),
+                    onTap: () => _showReflectionModal(context, reflection),
                   );
                 },
               );
@@ -369,6 +364,81 @@ final _archivedReflectionsProvider =
   (ref, userId) =>
       ref.read(reflectionServiceProvider).getArchivedReflections(userId),
 );
+
+void _showReflectionModal(
+  BuildContext context,
+  WeeklyReflectionEntity reflection,
+) {
+  final theme = Theme.of(context);
+  final weekLabel = KendinDateUtils.formatDateTurkish(
+    reflection.weekStartDate,
+  );
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: theme.scaffoldBackgroundColor,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadius)),
+    ),
+    builder: (context) {
+      return DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenHorizontal,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.md),
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 32,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                // Week label
+                Text(
+                  weekLabel,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                // Reflection content
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
+                      child: Text(
+                        reflection.content,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          height: 1.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 
 class _TimelineItem extends StatelessWidget {
   const _TimelineItem({
