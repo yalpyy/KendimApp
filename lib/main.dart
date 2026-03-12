@@ -4,10 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_theme.dart';
 import 'package:kendin/presentation/providers/locale_provider.dart';
+import 'package:kendin/presentation/screens/auth/login_screen.dart';
 import 'package:kendin/presentation/screens/home/home_screen.dart';
 import 'package:kendin/presentation/screens/landing/landing_screen.dart';
 
@@ -31,6 +33,14 @@ void main() async {
     debugPrint('[Kendin] initializeApp failed: $e');
   }
 
+  // Check if user has an existing authenticated session.
+  bool isLoggedIn = false;
+  try {
+    isLoggedIn = Supabase.instance.client.auth.currentSession != null;
+  } catch (_) {
+    // Supabase not initialized (e.g. empty URL).
+  }
+
   // Check if user has seen the landing screen.
   final prefs = await SharedPreferences.getInstance();
   final hasSeenLanding = prefs.getBool('has_seen_landing') ?? false;
@@ -43,6 +53,7 @@ void main() async {
       child: KendinApp(
         onDispose: disposer,
         showLanding: !hasSeenLanding,
+        isLoggedIn: isLoggedIn,
         initialLocale:
             savedLocale != null ? Locale(savedLocale) : null,
       ),
@@ -58,11 +69,13 @@ class KendinApp extends ConsumerStatefulWidget {
     super.key,
     required this.onDispose,
     required this.showLanding,
+    required this.isLoggedIn,
     this.initialLocale,
   });
 
   final AppDisposer onDispose;
   final bool showLanding;
+  final bool isLoggedIn;
   final Locale? initialLocale;
 
   @override
@@ -91,6 +104,19 @@ class _KendinAppState extends ConsumerState<KendinApp> {
   Widget build(BuildContext context) {
     final selectedLocale = ref.watch(localeProvider);
 
+    // Determine initial screen:
+    // 1. First launch → LandingScreen (has login/signup options)
+    // 2. Logged in    → HomeScreen
+    // 3. Not logged in → LoginScreen
+    final Widget home;
+    if (widget.showLanding) {
+      home = const LandingScreen();
+    } else if (widget.isLoggedIn) {
+      home = const HomeScreen();
+    } else {
+      home = const LoginScreen(isRoot: true);
+    }
+
     return MaterialApp(
       title: 'Kendin',
       debugShowCheckedModeBanner: false,
@@ -105,7 +131,7 @@ class _KendinAppState extends ConsumerState<KendinApp> {
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       locale: selectedLocale,
-      home: widget.showLanding ? const LandingScreen() : const HomeScreen(),
+      home: home,
     );
   }
 }

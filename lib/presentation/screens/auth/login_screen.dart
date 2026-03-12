@@ -9,14 +9,21 @@ import 'package:kendin/presentation/screens/auth/verify_email_screen.dart';
 import 'package:kendin/presentation/screens/legal/privacy_policy_screen.dart';
 import 'package:kendin/presentation/screens/legal/terms_of_service_screen.dart';
 import 'package:kendin/presentation/screens/legal/kvkk_screen.dart';
+import 'package:kendin/presentation/screens/home/home_screen.dart';
 import 'package:kendin/presentation/widgets/kendin_button.dart';
 
 /// Unified auth screen with sign-in / sign-up toggle.
 ///
 /// Sign-in: email + password.
 /// Sign-up: name + email + password + legal acceptance checkbox.
+///
+/// When [isRoot] is true, the screen acts as the app's entry point:
+/// no back button, and successful login navigates to HomeScreen.
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.isRoot = false});
+
+  /// Whether this screen is the root of the navigation stack.
+  final bool isRoot;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -55,12 +62,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
+                if (!widget.isRoot)
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
 
-                const SizedBox(height: AppSpacing.xxxl),
+                SizedBox(height: widget.isRoot ? AppSpacing.xxl : AppSpacing.xxxl),
 
                 // Title
                 Center(
@@ -205,21 +213,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _signIn(String email, String password) async {
     setState(() => _isLoading = true);
     try {
-      final oldUser = ref.read(currentUserProvider).valueOrNull;
-      final oldUserId = oldUser?.isAnonymous == true ? oldUser?.id : null;
-
       final user = await ref.read(authServiceProvider).signIn(email, password);
-
-      if (oldUserId != null && oldUserId != user.id) {
-        await ref
-            .read(authServiceProvider)
-            .migrateAnonymousData(oldUserId, user.id);
-      }
-
       ref.read(currentUserProvider.notifier).setUser(user);
 
       if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        _navigateToHome();
       }
     } catch (e) {
       _showError(AppLocalizations.of(context).genericError);
@@ -231,30 +229,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _signUp(String name, String email, String password) async {
     setState(() => _isLoading = true);
     try {
-      final oldUser = ref.read(currentUserProvider).valueOrNull;
-      final oldUserId = oldUser?.isAnonymous == true ? oldUser?.id : null;
-
       final newUser =
           await ref.read(authServiceProvider).signUp(email, password, name);
-
-      if (oldUserId != null && oldUserId != newUser.id) {
-        await ref
-            .read(authServiceProvider)
-            .migrateAnonymousData(oldUserId, newUser.id);
-      }
 
       ref.read(currentUserProvider.notifier).setUser(newUser);
 
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
-          (route) => route.isFirst,
-        );
+        if (widget.isRoot) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
+          );
+        } else {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const VerifyEmailScreen()),
+            (route) => route.isFirst,
+          );
+        }
       }
     } catch (e) {
       _showError(AppLocalizations.of(context).genericError);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _navigateToHome() {
+    if (widget.isRoot) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } else {
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
