@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_colors.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
+import 'package:kendin/data/datasources/supabase_client_setup.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 
 /// Admin panel — visible only to users with is_admin = true.
@@ -158,6 +160,16 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
 
                               const SizedBox(height: AppSpacing.xxl),
 
+                              // ─── Notification panel ───────────
+                              Text(
+                                l10n.adminNotificationsTitle,
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              const _NotificationPanel(),
+
+                              const SizedBox(height: AppSpacing.xxl),
+
                               // ─── Reflections debug table ────────
                               Text(
                                 l10n.adminReflectionsTitle,
@@ -267,6 +279,219 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       itemBuilder: (context, index) {
         return _ReflectionTile(reflection: reflections[index]);
       },
+    );
+  }
+}
+
+// ─── Notification Panel ─────────────────────────────
+
+enum _Audience { all, premium, free }
+
+class _NotificationPanel extends StatefulWidget {
+  const _NotificationPanel();
+
+  @override
+  State<_NotificationPanel> createState() => _NotificationPanelState();
+}
+
+class _NotificationPanelState extends State<_NotificationPanel> {
+  final _subjectController = TextEditingController();
+  final _bodyController = TextEditingController();
+  _Audience _audience = _Audience.all;
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _subjectController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
+
+  String _audienceLabel(AppLocalizations l10n) {
+    switch (_audience) {
+      case _Audience.all:
+        return l10n.adminNotificationAudienceAll;
+      case _Audience.premium:
+        return l10n.adminNotificationAudiencePremium;
+      case _Audience.free:
+        return l10n.adminNotificationAudienceFree;
+    }
+  }
+
+  Future<void> _send() async {
+    final l10n = AppLocalizations.of(context);
+    final subject = _subjectController.text.trim();
+    final body = _bodyController.text.trim();
+    if (subject.isEmpty || body.isEmpty) return;
+
+    // Confirm
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.adminNotificationsTitle),
+        content: Text(l10n.adminNotificationConfirm(_audienceLabel(l10n))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.adminNotificationSend),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isSending = true);
+
+    try {
+      final response = await SupabaseClientSetup.client.functions.invoke(
+        'send-email',
+        body: {
+          'broadcast': true,
+          'audience': _audience.name,
+          'subject': subject,
+          'body': body,
+        },
+      );
+
+      if (!mounted) return;
+
+      if (response.status == 200) {
+        final data = response.data as Map<String, dynamic>?;
+        final sent = data?['sent'] as int? ?? 0;
+        final failed = data?['failed'] as int? ?? 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.adminNotificationSuccess(sent, failed)),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _subjectController.clear();
+        _bodyController.clear();
+      } else {
+        final data = response.data as Map<String, dynamic>?;
+        final error = data?['error']?.toString() ?? 'Unknown error';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.adminNotificationError(error)),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[AdminScreen] Broadcast error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.adminNotificationError(e.toString())),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.2)
+                : AppColors.lightDivider.withOpacity(0.5),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Audience selector
+          Text(
+            l10n.adminNotificationAudience,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SegmentedButton<_Audience>(
+            segments: [
+              ButtonSegment(
+                value: _Audience.all,
+                label: Text(l10n.adminNotificationAudienceAll,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+              ButtonSegment(
+                value: _Audience.premium,
+                label: Text(l10n.adminNotificationAudiencePremium,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+              ButtonSegment(
+                value: _Audience.free,
+                label: Text(l10n.adminNotificationAudienceFree,
+                    style: const TextStyle(fontSize: 12)),
+              ),
+            ],
+            selected: {_audience},
+            onSelectionChanged: (v) => setState(() => _audience = v.first),
+            showSelectedIcon: false,
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // Subject
+          TextField(
+            controller: _subjectController,
+            decoration: InputDecoration(
+              labelText: l10n.adminNotificationSubject,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // Body
+          TextField(
+            controller: _bodyController,
+            decoration: InputDecoration(
+              labelText: l10n.adminNotificationBody,
+              border: const OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+            maxLines: 5,
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // Send button
+          SizedBox(
+            width: double.infinity,
+            height: AppSpacing.buttonHeight,
+            child: FilledButton(
+              onPressed: _isSending ? null : _send,
+              child: Text(
+                _isSending
+                    ? l10n.adminNotificationSending
+                    : l10n.adminNotificationSend,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

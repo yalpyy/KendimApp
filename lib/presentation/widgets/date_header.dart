@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:kendin/core/utils/date_utils.dart';
 
-/// Displays the current date in Turkish format.
-/// e.g., "4 Şubat · Pazartesi"
+/// Displays the current date in locale-aware format.
+/// e.g., "4 Şubat · Pazartesi" (tr) or "4 February · Monday" (en)
 class DateHeader extends StatelessWidget {
   const DateHeader({super.key, DateTime? date}) : _date = date;
 
@@ -12,8 +12,9 @@ class DateHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = _date ?? DateTime.now();
+    final locale = Localizations.localeOf(context);
     return Text(
-      KendinDateUtils.formatDateTurkish(date),
+      KendinDateUtils.formatDate(date, locale: locale),
       style: Theme.of(context).textTheme.titleMedium,
     );
   }
