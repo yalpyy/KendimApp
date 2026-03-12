@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:kendin/core/constants/app_strings.dart';
 
 /// Date helpers for the Kendin weekly cycle.
@@ -22,13 +24,21 @@ class KendinDateUtils {
     return List.generate(6, (i) => monday.add(Duration(days: i)));
   }
 
-  /// Formats date as "4 Şubat · Pazartesi".
-  static String formatDateTurkish(DateTime date) {
+  /// Formats date as "4 February · Monday" (en) or "4 Şubat · Pazartesi" (tr).
+  static String formatDate(DateTime date, {Locale? locale}) {
+    final isEn = locale?.languageCode == 'en';
     final day = date.day;
-    final month = AppStrings.monthNames[date.month - 1];
-    final weekday = AppStrings.dayNames[date.weekday - 1];
+    final month = isEn
+        ? AppStrings.monthNamesEn[date.month - 1]
+        : AppStrings.monthNamesTr[date.month - 1];
+    final weekday = isEn
+        ? AppStrings.dayNamesEn[date.weekday - 1]
+        : AppStrings.dayNamesTr[date.weekday - 1];
     return '$day $month · $weekday';
   }
+
+  /// Legacy alias — always Turkish.
+  static String formatDateTurkish(DateTime date) => formatDate(date);
 
   /// Returns true if [a] and [b] are the same calendar day.
   static bool isSameDay(DateTime a, DateTime b) {

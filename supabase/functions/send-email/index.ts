@@ -4,15 +4,18 @@
 // IMPORTANT: RESEND_API_KEY must be set as a Supabase secret.
 //   supabase secrets set RESEND_API_KEY=re_xxxxx
 //
-// Supported email types:
-//   - welcome: sent after first email account creation
-//   - premium_activated: sent when premium subscription starts
-//   - premium_expired: sent when premium subscription expires
+// Supported modes:
+//   1. Single:    { email_type, to_email, to_name }
+//   2. Broadcast: { broadcast: true, audience: "all"|"premium"|"free", subject, body }
+//
+// Supported email types (single mode):
+//   - welcome, premium_activated, premium_expired
 //
 // This function NEVER exposes the Resend API key to the client.
 // Deploy: supabase functions deploy send-email
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -66,6 +69,29 @@ const templates: Record<string, { subject: string; html: (name: string) => strin
   },
 }
 
+function wrapHtml(subject: string, body: string): string {
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 24px; color: #1a1a1a;">
+      <h2 style="font-weight: 500; font-size: 20px; margin-bottom: 16px;">${subject}</h2>
+      <div style="color: #666; line-height: 1.6; font-size: 15px; white-space: pre-line;">${body}</div>
+      <p style="color: #999; font-size: 13px; margin-top: 32px;">— Kendin</p>
+    </div>
+  `
+}
+
+async function sendOne(apiKey: string, to: string, subject: string, html: string): Promise<boolean> {
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'Kendin <noreply@kendin.app>', to: [to], subject, html }),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -77,7 +103,59 @@ serve(async (req: Request) => {
       throw new Error('RESEND_API_KEY is not configured')
     }
 
-    const { email_type, to_email, to_name } = await req.json()
+    const payload = await req.json()
+
+    // ─── Broadcast mode ─────────────────────────────
+    if (payload.broadcast === true) {
+      const { audience, subject, body } = payload
+      if (!audience || !subject || !body) {
+        return new Response(
+          JSON.stringify({ error: 'Missing audience, subject, or body' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+      // Query users based on audience
+      let query = supabase.from('users').select('id, display_name, is_premium')
+      if (audience === 'premium') query = query.eq('is_premium', true)
+      else if (audience === 'free') query = query.eq('is_premium', false)
+
+      const { data: users, error: usersError } = await query
+      if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`)
+
+      // Get emails from auth.users
+      const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+      if (authError) throw new Error(`Failed to fetch auth users: ${authError.message}`)
+
+      const emailMap = new Map<string, string>()
+      for (const au of authUsers) {
+        if (au.email) emailMap.set(au.id, au.email)
+      }
+
+      const html = wrapHtml(subject, body)
+      let sent = 0
+      let failed = 0
+
+      for (const user of users || []) {
+        const email = emailMap.get(user.id)
+        if (!email) continue
+        const ok = await sendOne(resendApiKey, email, subject, html)
+        if (ok) sent++
+        else failed++
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, sent, failed, total: (users || []).length }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
+    // ─── Single email mode ──────────────────────────
+    const { email_type, to_email, to_name } = payload
 
     if (!email_type || !to_email) {
       return new Response(

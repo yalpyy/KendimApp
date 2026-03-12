@@ -1,15 +1,11 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/domain/entities/user_entity.dart';
 import 'package:kendin/core/theme/app_colors.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
-import 'package:kendin/data/datasources/supabase_client_setup.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 import 'package:kendin/presentation/screens/about/about_screen.dart';
 import 'package:kendin/presentation/screens/admin/admin_screen.dart';
@@ -23,7 +19,7 @@ import 'package:kendin/presentation/screens/premium/premium_paywall_screen.dart'
 /// 1. Current User Info (ID, email, type, premium status)
 /// 2. Cards: Derinlik, Dil, Hakkında, Admin (if admin)
 /// 3. Login/Register (anonymous) or Logout (registered)
-/// 4. Debug section (expandable — raw session, token expiry, metadata)
+/// 3b. Delete Account (registered users only)
 class MenuScreen extends ConsumerWidget {
   const MenuScreen({super.key});
 
@@ -236,10 +232,31 @@ class MenuScreen extends ConsumerWidget {
                 error: (_, __) => const SizedBox.shrink(),
               ),
 
-              const SizedBox(height: AppSpacing.xxl),
-
-              // ─── 4. Debug Section (expandable) ────────────
-              const _DebugSection(),
+              // ─── 3b. Delete Account ──────────────────────
+              userAsync.when(
+                data: (user) {
+                  if (user == null || user.isAnonymous) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.md),
+                    child: Center(
+                      child: TextButton(
+                        onPressed: () =>
+                            _confirmDeleteAccount(context, ref, user.id),
+                        child: Text(
+                          l10n.menuDeleteAccount,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
 
               const SizedBox(height: AppSpacing.md),
             ],
@@ -257,6 +274,68 @@ class MenuScreen extends ConsumerWidget {
         return l10n.membershipPremium;
       case MembershipStatus.expired:
         return l10n.membershipExpired;
+    }
+  }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+    String userId,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deleteAccountConfirmTitle),
+        content: Text(l10n.deleteAccountConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              l10n.deleteAccountConfirmButton,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(authServiceProvider).deleteAccount(userId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.accountDeleted),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        // Re-initialize with anonymous session
+        await ref.read(currentUserProvider.notifier).refresh();
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => const LoginScreen(isRoot: true),
+            ),
+            (_) => false,
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.genericError),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -434,167 +513,6 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           trailing!,
         ],
-      ],
-    );
-  }
-}
-
-// ─── Debug Section ──────────────────────────────────
-
-class _DebugSection extends StatefulWidget {
-  const _DebugSection();
-
-  @override
-  State<_DebugSection> createState() => _DebugSectionState();
-}
-
-class _DebugSectionState extends State<_DebugSection> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-
-    Session? session;
-    try {
-      session = SupabaseClientSetup.client.auth.currentSession;
-    } catch (_) {
-      session = null;
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => _isExpanded = !_isExpanded),
-          child: Row(
-            children: [
-              Icon(
-                _isExpanded
-                    ? Icons.keyboard_arrow_down
-                    : Icons.keyboard_arrow_right,
-                size: 20,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                l10n.menuDebugTitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        if (_isExpanded) ...[
-          const SizedBox(height: AppSpacing.md),
-
-          if (session == null)
-            Text(
-              l10n.menuDebugNoSession,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            )
-          else ...[
-            // Token expiry
-            _DebugField(
-              label: l10n.menuDebugTokenExpiry,
-              value: session.expiresAt != null
-                  ? DateTime.fromMillisecondsSinceEpoch(
-                      session.expiresAt! * 1000,
-                    ).toIso8601String()
-                  : '-',
-            ),
-
-            const SizedBox(height: AppSpacing.sm),
-
-            // User metadata
-            _DebugField(
-              label: l10n.menuDebugMetadata,
-              value: _prettyJson(session.user.userMetadata),
-            ),
-
-            const SizedBox(height: AppSpacing.sm),
-
-            // Raw session JSON
-            _DebugField(
-              label: l10n.menuDebugSession,
-              value: _sessionSummary(session),
-            ),
-          ],
-        ],
-      ],
-    );
-  }
-
-  String _prettyJson(Map<String, dynamic>? data) {
-    if (data == null || data.isEmpty) return '{}';
-    try {
-      return const JsonEncoder.withIndent('  ').convert(data);
-    } catch (_) {
-      return data.toString();
-    }
-  }
-
-  String _sessionSummary(Session session) {
-    final summary = {
-      'user_id': session.user.id,
-      'email': session.user.email,
-      'is_anonymous': session.user.userMetadata?['is_anonymous'],
-      'expires_at': session.expiresAt,
-      'token_type': session.tokenType,
-      'provider_token': session.providerToken != null ? '***' : null,
-      'created_at': session.user.createdAt,
-    };
-    try {
-      return const JsonEncoder.withIndent('  ').convert(summary);
-    } catch (_) {
-      return summary.toString();
-    }
-  }
-}
-
-class _DebugField extends StatelessWidget {
-  const _DebugField({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.sm),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(AppSpacing.xs),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant,
-            ),
-          ),
-          child: SelectableText(
-            value,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontFamily: 'monospace',
-              fontSize: 11,
-            ),
-          ),
-        ),
       ],
     );
   }

@@ -194,6 +194,23 @@ class AppLocalizations {
       'admin_reflections_title': 'Yansımalar (Debug)',
       'admin_no_reflections': 'Henüz yansıma yok.',
 
+      // Admin Notifications
+      'admin_notifications_title': 'Bildirim Gönder',
+      'admin_notification_subject': 'Konu',
+      'admin_notification_body': 'Mesaj',
+      'admin_notification_audience': 'Hedef Kitle',
+      'admin_notification_audience_all': 'Tüm Kullanıcılar',
+      'admin_notification_audience_premium': 'Premium Kullanıcılar',
+      'admin_notification_audience_free': 'Ücretsiz Kullanıcılar',
+      'admin_notification_send': 'Gönder',
+      'admin_notification_sending': 'Gönderiliyor...',
+      'admin_notification_success': 'Başarılı: {sent}, Başarısız: {failed}',
+      'admin_notification_error': 'Gönderim başarısız: {error}',
+      'admin_notification_confirm': '{audience} grubuna e-posta göndermek istediğinden emin misin?',
+
+      // Menu — Delete Account
+      'menu_delete_account': 'Hesabımı Sil',
+
       // User Info (Menu)
       'menu_user_id': 'Kullanıcı ID',
       'menu_user_email': 'E-posta',
@@ -388,6 +405,23 @@ class AppLocalizations {
       'admin_reflections_title': 'Reflections (Debug)',
       'admin_no_reflections': 'No reflections yet.',
 
+      // Admin Notifications
+      'admin_notifications_title': 'Send Notification',
+      'admin_notification_subject': 'Subject',
+      'admin_notification_body': 'Message',
+      'admin_notification_audience': 'Audience',
+      'admin_notification_audience_all': 'All Users',
+      'admin_notification_audience_premium': 'Premium Users',
+      'admin_notification_audience_free': 'Free Users',
+      'admin_notification_send': 'Send',
+      'admin_notification_sending': 'Sending...',
+      'admin_notification_success': 'Sent: {sent}, Failed: {failed}',
+      'admin_notification_error': 'Send failed: {error}',
+      'admin_notification_confirm': 'Are you sure you want to send email to {audience}?',
+
+      // Menu — Delete Account
+      'menu_delete_account': 'Delete My Account',
+
       // User Info (Menu)
       'menu_user_id': 'User ID',
       'menu_user_email': 'Email',
@@ -559,6 +593,28 @@ class AppLocalizations {
   String get adminNoUsers => _get('admin_no_users');
   String get adminReflectionsTitle => _get('admin_reflections_title');
   String get adminNoReflectionsDebug => _get('admin_no_reflections');
+
+  // Admin Notifications
+  String get adminNotificationsTitle => _get('admin_notifications_title');
+  String get adminNotificationSubject => _get('admin_notification_subject');
+  String get adminNotificationBody => _get('admin_notification_body');
+  String get adminNotificationAudience => _get('admin_notification_audience');
+  String get adminNotificationAudienceAll => _get('admin_notification_audience_all');
+  String get adminNotificationAudiencePremium => _get('admin_notification_audience_premium');
+  String get adminNotificationAudienceFree => _get('admin_notification_audience_free');
+  String get adminNotificationSend => _get('admin_notification_send');
+  String get adminNotificationSending => _get('admin_notification_sending');
+  String adminNotificationSuccess(int sent, int failed) =>
+      _get('admin_notification_success')
+          .replaceAll('{sent}', '$sent')
+          .replaceAll('{failed}', '$failed');
+  String adminNotificationError(String error) =>
+      _get('admin_notification_error').replaceAll('{error}', error);
+  String adminNotificationConfirm(String audience) =>
+      _get('admin_notification_confirm').replaceAll('{audience}', audience);
+
+  // Menu — Delete Account
+  String get menuDeleteAccount => _get('menu_delete_account');
 
   // User Info (Menu)
   String get menuUserId => _get('menu_user_id');

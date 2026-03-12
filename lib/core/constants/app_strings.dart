@@ -10,7 +10,7 @@ class AppStrings {
   static const String entryPlaceholder = 'Bugün ne oldu...';
 
   // Days
-  static const List<String> dayNames = [
+  static const List<String> dayNamesTr = [
     'Pazartesi',
     'Salı',
     'Çarşamba',
@@ -20,7 +20,17 @@ class AppStrings {
     'Pazar',
   ];
 
-  static const List<String> monthNames = [
+  static const List<String> dayNamesEn = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
+  static const List<String> monthNamesTr = [
     'Ocak',
     'Şubat',
     'Mart',
@@ -34,6 +44,25 @@ class AppStrings {
     'Kasım',
     'Aralık',
   ];
+
+  static const List<String> monthNamesEn = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
+  /// Backwards compatibility
+  static const List<String> dayNames = dayNamesTr;
+  static const List<String> monthNames = monthNamesTr;
 
   // Sunday / Reflection
   static const String seeThisWeek = 'Bu haftayı gör';

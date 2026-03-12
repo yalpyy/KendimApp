@@ -388,8 +388,10 @@ class _TimelineItem extends StatelessWidget {
     final lineColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
     final dotColor = isDark ? AppColors.darkAccent : AppColors.lightAccent;
 
-    final weekLabel = KendinDateUtils.formatDateTurkish(
+    final locale = Localizations.localeOf(context);
+    final weekLabel = KendinDateUtils.formatDate(
       reflection.weekStartDate,
+      locale: locale,
     );
     final preview = reflection.content.length > 80
         ? '${reflection.content.substring(0, 80)}...'
