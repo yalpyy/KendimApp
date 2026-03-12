@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -220,7 +221,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         _navigateToHome();
       }
     } catch (e) {
-      _showError(AppLocalizations.of(context).genericError);
+      debugPrint('[LoginScreen] Sign-in error: $e');
+      _showError('$e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -247,7 +249,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       }
     } catch (e) {
-      _showError(AppLocalizations.of(context).genericError);
+      debugPrint('[LoginScreen] Sign-up error: $e');
+      _showError('$e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
