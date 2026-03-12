@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #F7F5F0;
+      color: #1A1A1A;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #6B6560;
+      margin-bottom: 24px;
+    }
+    .button {
+      display: inline-block;
+      background-color: #8B7355;
+      color: #FFFFFF !important;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    .footer {
+      margin-top: 48px;
+      font-size: 13px;
+      color: #A39E96;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Giriş Bağlantın</h1>
+    <p>
+      Kendin'e giriş yapmak için aşağıdaki butona tıkla.
+    </p>
+    <a href="{{ .ConfirmationURL }}" class="button">Giriş Yap</a>
+    <div class="footer">
+      Bu bağlantı 24 saat geçerlidir.<br />
+      Bu talebi sen yapmadıysan görmezden gelebilirsin.
+    </div>
+  </div>
+</body>
+</html>
