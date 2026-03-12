@@ -10,11 +10,9 @@ class AuthService {
 
   final AuthRepository _repository;
 
-  /// Initialize auth — sign in anonymously if no session exists.
-  Future<UserEntity> initialize() async {
-    final existing = await _repository.getCurrentUser();
-    if (existing != null) return existing;
-    return _repository.signInAnonymously();
+  /// Initialize auth — returns existing user or null if not logged in.
+  Future<UserEntity?> initialize() async {
+    return _repository.getCurrentUser();
   }
 
   Future<UserEntity?> getCurrentUser() => _repository.getCurrentUser();

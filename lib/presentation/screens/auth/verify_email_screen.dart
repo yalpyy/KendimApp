@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/providers/providers.dart';
+import 'package:kendin/presentation/screens/home/home_screen.dart';
 import 'package:kendin/presentation/widgets/kendin_button.dart';
 
 /// Email verification screen.
@@ -106,7 +107,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         await ref.read(currentUserProvider.notifier).refresh();
 
         if (mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            (_) => false,
+          );
         }
       } else {
         if (mounted) {

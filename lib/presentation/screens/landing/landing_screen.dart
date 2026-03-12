@@ -5,18 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/presentation/screens/auth/login_screen.dart';
-import 'package:kendin/presentation/screens/home/home_screen.dart';
 import 'package:kendin/presentation/widgets/animated_dots.dart';
 import 'package:kendin/presentation/widgets/kendin_button.dart';
 
 /// First-launch landing screen.
 ///
 /// Shows animated strike dots, a short ritual description,
-/// a "Başla" / "Start" button, and auth entry points
-/// ("Giriş Yap" / "Kayıt Ol") at the bottom.
+/// and a "Başla" / "Start" button.
 ///
 /// Once "Başla" is tapped, sets [has_seen_landing] in
-/// SharedPreferences and navigates to HomeScreen.
+/// SharedPreferences and navigates to LoginScreen.
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
 
@@ -30,28 +28,15 @@ class LandingScreen extends StatelessWidget {
       debugPrint('[Kendin] Failed to save landing preference: $e');
     });
 
-    // Navigate immediately.
+    // Navigate to login screen.
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const HomeScreen(),
+        pageBuilder: (_, __, ___) => const LoginScreen(isRoot: true),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 400),
       ),
-    );
-  }
-
-  void _onLogin(BuildContext context) {
-    // Save landing pref so it won't show again after login.
-    SharedPreferences.getInstance().then((prefs) {
-      prefs.setBool(_prefsKey, true);
-    }).catchError((e) {
-      debugPrint('[Kendin] Failed to save landing preference: $e');
-    });
-
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
     );
   }
 
@@ -93,46 +78,13 @@ class LandingScreen extends StatelessWidget {
 
               const Spacer(flex: 3),
 
-              // Start button (anonymous entry)
+              // Start button → navigates to login screen
               SizedBox(
                 width: 200,
                 child: KendinButton(
                   label: l10n.landingButton,
                   onPressed: () => _onStart(context),
                 ),
-              ),
-
-              const SizedBox(height: AppSpacing.lg),
-
-              // Auth entry — "Giriş Yap" / "Kayıt Ol"
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () => _onLogin(context),
-                    child: Text(
-                      l10n.landingLogin,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '  ·  ',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => _onLogin(context),
-                    child: Text(
-                      l10n.landingSignup,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
               ),
 
               const Spacer(flex: 1),

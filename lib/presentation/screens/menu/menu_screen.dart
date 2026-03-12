@@ -263,10 +263,13 @@ class MenuScreen extends ConsumerWidget {
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {
     try {
       await ref.read(authServiceProvider).signOut();
-      final user = await ref.read(authServiceProvider).initialize();
-      ref.read(currentUserProvider.notifier).setUser(user);
       if (context.mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const LoginScreen(isRoot: true),
+          ),
+          (_) => false,
+        );
       }
     } catch (e) {
       if (context.mounted) {
