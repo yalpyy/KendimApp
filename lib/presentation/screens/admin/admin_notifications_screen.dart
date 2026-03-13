@@ -54,13 +54,7 @@ class _AdminNotificationsScreenState
     final l10n = AppLocalizations.of(context);
 
     if (_notificationType == _NotificationType.push) {
-      // Push notification placeholder
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.adminPushNotConfigured),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      await _sendPush();
       return;
     }
 
@@ -126,6 +120,83 @@ class _AdminNotificationsScreenState
       }
     } catch (e) {
       debugPrint('[AdminNotifications] Broadcast error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.adminNotificationError(e.toString())),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  Future<void> _sendPush() async {
+    final l10n = AppLocalizations.of(context);
+    final title = _pushTitleController.text.trim();
+    final body = _bodyController.text.trim();
+    if (title.isEmpty || body.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.adminNotificationsTitle),
+        content: Text(l10n.adminNotificationConfirm(_audienceLabel(l10n))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.adminNotificationSend),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isSending = true);
+
+    try {
+      final response = await SupabaseClientSetup.client.functions.invoke(
+        'send-push',
+        body: {
+          'broadcast': true,
+          'audience': _audience.name,
+          'title': title,
+          'body': body,
+        },
+      );
+
+      if (!mounted) return;
+
+      if (response.status == 200) {
+        final data = response.data as Map<String, dynamic>?;
+        final sent = data?['sent'] as int? ?? 0;
+        final failed = data?['failed'] as int? ?? 0;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.adminNotificationSuccess(sent, failed)),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        _pushTitleController.clear();
+        _bodyController.clear();
+      } else {
+        final data = response.data as Map<String, dynamic>?;
+        final error = data?['error']?.toString() ?? 'Unknown error';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.adminNotificationError(error)),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[AdminNotifications] Push error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
