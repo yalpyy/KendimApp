@@ -140,7 +140,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         const SizedBox(width: 40),
                         const Spacer(),
                         IconButton(
-                          icon: const Icon(Icons.more_horiz),
+                          icon: const Icon(Icons.home_outlined),
                           onPressed: () => _openMenu(context),
                         ),
                       ],

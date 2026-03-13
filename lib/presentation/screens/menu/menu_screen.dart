@@ -74,11 +74,7 @@ class MenuScreen extends ConsumerWidget {
 
                       // User info card
                       _UserInfoCard(
-                        userId: user.id,
-                        email: user.email,
-                        isAnonymous: user.isAnonymous,
-                        isPremium: user.isPremium,
-                        isAdmin: user.isAdmin,
+                        user: user,
                       ),
                     ],
                   );
@@ -366,26 +362,76 @@ class MenuScreen extends ConsumerWidget {
 
 // ─── User Info Card ──────────────────────────────────
 
-class _UserInfoCard extends StatelessWidget {
-  const _UserInfoCard({
-    required this.userId,
-    required this.email,
-    required this.isAnonymous,
-    required this.isPremium,
-    required this.isAdmin,
-  });
+class _UserInfoCard extends ConsumerStatefulWidget {
+  const _UserInfoCard({required this.user});
 
-  final String userId;
-  final String? email;
-  final bool isAnonymous;
-  final bool isPremium;
-  final bool isAdmin;
+  final UserEntity user;
+
+  @override
+  ConsumerState<_UserInfoCard> createState() => _UserInfoCardState();
+}
+
+class _UserInfoCardState extends ConsumerState<_UserInfoCard> {
+  bool _isEditingName = false;
+  late final TextEditingController _nameController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(
+      text: widget.user.displayName ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveName() async {
+    final newName = _nameController.text.trim();
+    if (newName.isEmpty) return;
+
+    setState(() => _isSaving = true);
+    try {
+      await ref
+          .read(authDatasourceProvider)
+          .updateDisplayName(widget.user.id, newName);
+      ref.read(currentUserProvider.notifier).setUser(
+            widget.user.copyWith(displayName: newName),
+          );
+      if (mounted) {
+        setState(() => _isEditingName = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).profileNameSaved),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).genericError),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final user = widget.user;
 
     return Container(
       width: double.infinity,
@@ -396,8 +442,8 @@ class _UserInfoCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity( 0.2)
-                : AppColors.lightDivider.withOpacity( 0.5),
+                ? Colors.black.withOpacity(0.2)
+                : AppColors.lightDivider.withOpacity(0.5),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -406,39 +452,63 @@ class _UserInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User ID with copy button
-          _InfoRow(
-            label: l10n.menuUserId,
-            value: userId.length > 16
-                ? '${userId.substring(0, 8)}...${userId.substring(userId.length - 4)}'
-                : userId,
-            trailing: IconButton(
-              icon: Icon(
-                Icons.copy,
-                size: 16,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              constraints: const BoxConstraints(),
-              padding: EdgeInsets.zero,
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: userId));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.menuCopied),
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 1),
+          // Display name with edit pencil
+          if (_isEditingName)
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _nameController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: l10n.profileNameHint,
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                    ),
+                    textCapitalization: TextCapitalization.words,
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                IconButton(
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check, size: 20),
+                  onPressed: _isSaving ? null : _saveName,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () => setState(() => _isEditingName = false),
+                ),
+              ],
+            )
+          else
+            _InfoRow(
+              label: l10n.nameHint,
+              value: (user.displayName != null && user.displayName!.isNotEmpty)
+                  ? user.displayName!
+                  : '-',
+              trailing: IconButton(
+                icon: Icon(
+                  Icons.edit,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                constraints: const BoxConstraints(),
+                padding: EdgeInsets.zero,
+                onPressed: () => setState(() => _isEditingName = true),
+              ),
             ),
-          ),
 
           const Divider(height: AppSpacing.md),
 
           // Email
           _InfoRow(
             label: l10n.menuUserEmail,
-            value: email ?? '-',
+            value: user.email ?? '-',
           ),
 
           const Divider(height: AppSpacing.md),
@@ -446,7 +516,7 @@ class _UserInfoCard extends StatelessWidget {
           // Account type
           _InfoRow(
             label: l10n.menuUserType,
-            value: isAnonymous
+            value: user.isAnonymous
                 ? l10n.menuUserTypeAnonymous
                 : l10n.menuUserTypeRegistered,
           ),
@@ -456,12 +526,14 @@ class _UserInfoCard extends StatelessWidget {
           // Membership status
           _InfoRow(
             label: l10n.menuUserPremiumStatus,
-            value: isPremium ? l10n.membershipPremium : l10n.membershipFree,
-            valueColor: isPremium ? theme.colorScheme.primary : null,
+            value: user.isPremium
+                ? l10n.membershipPremium
+                : l10n.membershipFree,
+            valueColor: user.isPremium ? theme.colorScheme.primary : null,
           ),
 
           // Admin badge
-          if (isAdmin) ...[
+          if (user.isAdmin) ...[
             const Divider(height: AppSpacing.md),
             _InfoRow(
               label: 'Admin',

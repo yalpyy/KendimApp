@@ -1,756 +1,146 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_colors.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
-import 'package:kendin/data/datasources/supabase_client_setup.dart';
-import 'package:kendin/presentation/providers/providers.dart';
+import 'package:kendin/presentation/screens/admin/admin_notifications_screen.dart';
+import 'package:kendin/presentation/screens/admin/admin_reflections_screen.dart';
+import 'package:kendin/presentation/screens/admin/admin_stats_screen.dart';
+import 'package:kendin/presentation/screens/admin/admin_users_screen.dart';
 
-/// Admin panel — visible only to users with is_admin = true.
-///
-/// Shows:
-/// - App statistics (total users, premium users, entries, reflections)
-/// - User list with premium/admin badges
-/// - Reflections debug table (reflection_id, user_id, week_start, sentence_count, created_at)
-class AdminScreen extends ConsumerStatefulWidget {
+/// Admin panel hub — navigation to sub-pages.
+class AdminScreen extends ConsumerWidget {
   const AdminScreen({super.key});
 
   @override
-  ConsumerState<AdminScreen> createState() => _AdminScreenState();
-}
-
-class _AdminScreenState extends ConsumerState<AdminScreen> {
-  Map<String, int>? _stats;
-  List<Map<String, dynamic>>? _users;
-  List<Map<String, dynamic>>? _reflections;
-  bool _isLoading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final datasource = ref.read(authDatasourceProvider);
-      final results = await Future.wait([
-        datasource.getAdminStats(),
-        datasource.getAllUsers(),
-        datasource.getAllReflections(),
-      ]);
-
-      setState(() {
-        _stats = results[0] as Map<String, int>;
-        _users = results[1] as List<Map<String, dynamic>>;
-        _reflections = results[2] as List<Map<String, dynamic>>;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.screenHorizontal,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.screenHorizontal,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: AppSpacing.screenVertical),
+              Row(
                 children: [
-                  const SizedBox(height: AppSpacing.screenVertical),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.refresh),
-                        onPressed: _loadData,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    l10n.adminTitle,
-                    style: theme.textTheme.displayLarge,
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                l10n.adminTitle,
+                style: theme.textTheme.displayLarge,
+              ),
+              const SizedBox(height: AppSpacing.xxl),
 
-            const SizedBox(height: AppSpacing.lg),
+              // Menu cards
+              _AdminMenuCard(
+                icon: Icons.bar_chart,
+                title: l10n.adminTabStats,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AdminStatsScreen(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _AdminMenuCard(
+                icon: Icons.people,
+                title: l10n.adminTabUsers,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AdminUsersScreen(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _AdminMenuCard(
+                icon: Icons.notifications,
+                title: l10n.adminTabNotifications,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AdminNotificationsScreen(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _AdminMenuCard(
+                icon: Icons.auto_stories,
+                title: l10n.adminTabReflections,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const AdminReflectionsScreen(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-            // Content
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.xxl),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _error!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.error,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: AppSpacing.md),
-                                TextButton(
-                                  onPressed: _loadData,
-                                  child: Text(l10n.genericError),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _loadData,
-                          child: ListView(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.screenHorizontal,
-                            ),
-                            children: [
-                              // ─── Statistics ──────────────────────
-                              Text(
-                                l10n.adminStatsTitle,
-                                style: theme.textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              _buildStatsGrid(context),
+class _AdminMenuCard extends StatelessWidget {
+  const _AdminMenuCard({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+  });
 
-                              const SizedBox(height: AppSpacing.xxl),
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
 
-                              // ─── Users list ─────────────────────
-                              Text(
-                                l10n.adminUsersTitle,
-                                style: theme.textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              _buildUsersList(context),
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-                              const SizedBox(height: AppSpacing.xxl),
-
-                              // ─── Notification panel ───────────
-                              Text(
-                                l10n.adminNotificationsTitle,
-                                style: theme.textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              const _NotificationPanel(),
-
-                              const SizedBox(height: AppSpacing.xxl),
-
-                              // ─── Reflections debug table ────────
-                              Text(
-                                l10n.adminReflectionsTitle,
-                                style: theme.textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                              _buildReflectionsTable(context),
-
-                              const SizedBox(height: AppSpacing.xxl),
-                            ],
-                          ),
-                        ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.cardPadding),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? Colors.black.withOpacity(0.2)
+                  : AppColors.lightDivider.withOpacity(0.5),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatsGrid(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final stats = _stats ?? {};
-
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: AppSpacing.md,
-      crossAxisSpacing: AppSpacing.md,
-      childAspectRatio: 1.6,
-      children: [
-        _StatCard(
-          label: l10n.adminTotalUsers,
-          value: '${stats['total_users'] ?? 0}',
-        ),
-        _StatCard(
-          label: l10n.adminPremiumUsers,
-          value: '${stats['premium_users'] ?? 0}',
-        ),
-        _StatCard(
-          label: l10n.adminTotalEntries,
-          value: '${stats['total_entries'] ?? 0}',
-        ),
-        _StatCard(
-          label: l10n.adminTotalReflections,
-          value: '${stats['total_reflections'] ?? 0}',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUsersList(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final users = _users ?? [];
-
-    if (users.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xxl),
-          child: Text(
-            l10n.adminNoUsers,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: users.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final user = users[index];
-        return _UserTile(user: user);
-      },
-    );
-  }
-
-  Widget _buildReflectionsTable(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final reflections = _reflections ?? [];
-
-    if (reflections.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xxl),
-          child: Text(
-            l10n.adminNoReflectionsDebug,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: reflections.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        return _ReflectionTile(reflection: reflections[index]);
-      },
-    );
-  }
-}
-
-// ─── Notification Panel ─────────────────────────────
-
-enum _Audience { all, premium, free }
-
-class _NotificationPanel extends StatefulWidget {
-  const _NotificationPanel();
-
-  @override
-  State<_NotificationPanel> createState() => _NotificationPanelState();
-}
-
-class _NotificationPanelState extends State<_NotificationPanel> {
-  final _subjectController = TextEditingController();
-  final _bodyController = TextEditingController();
-  _Audience _audience = _Audience.all;
-  bool _isSending = false;
-
-  @override
-  void dispose() {
-    _subjectController.dispose();
-    _bodyController.dispose();
-    super.dispose();
-  }
-
-  String _audienceLabel(AppLocalizations l10n) {
-    switch (_audience) {
-      case _Audience.all:
-        return l10n.adminNotificationAudienceAll;
-      case _Audience.premium:
-        return l10n.adminNotificationAudiencePremium;
-      case _Audience.free:
-        return l10n.adminNotificationAudienceFree;
-    }
-  }
-
-  Future<void> _send() async {
-    final l10n = AppLocalizations.of(context);
-    final subject = _subjectController.text.trim();
-    final body = _bodyController.text.trim();
-    if (subject.isEmpty || body.isEmpty) return;
-
-    // Confirm
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.adminNotificationsTitle),
-        content: Text(l10n.adminNotificationConfirm(_audienceLabel(l10n))),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.adminNotificationSend),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    setState(() => _isSending = true);
-
-    try {
-      final response = await SupabaseClientSetup.client.functions.invoke(
-        'send-email',
-        body: {
-          'broadcast': true,
-          'audience': _audience.name,
-          'subject': subject,
-          'body': body,
-        },
-      );
-
-      if (!mounted) return;
-
-      if (response.status == 200) {
-        final data = response.data as Map<String, dynamic>?;
-        final sent = data?['sent'] as int? ?? 0;
-        final failed = data?['failed'] as int? ?? 0;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.adminNotificationSuccess(sent, failed)),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        _subjectController.clear();
-        _bodyController.clear();
-      } else {
-        final data = response.data as Map<String, dynamic>?;
-        final error = data?['error']?.toString() ?? 'Unknown error';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.adminNotificationError(error)),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('[AdminScreen] Broadcast error: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.adminNotificationError(e.toString())),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSending = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.cardPadding),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity(0.2)
-                : AppColors.lightDivider.withOpacity(0.5),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Audience selector
-          Text(
-            l10n.adminNotificationAudience,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SegmentedButton<_Audience>(
-            segments: [
-              ButtonSegment(
-                value: _Audience.all,
-                label: Text(l10n.adminNotificationAudienceAll,
-                    style: const TextStyle(fontSize: 12)),
-              ),
-              ButtonSegment(
-                value: _Audience.premium,
-                label: Text(l10n.adminNotificationAudiencePremium,
-                    style: const TextStyle(fontSize: 12)),
-              ),
-              ButtonSegment(
-                value: _Audience.free,
-                label: Text(l10n.adminNotificationAudienceFree,
-                    style: const TextStyle(fontSize: 12)),
-              ),
-            ],
-            selected: {_audience},
-            onSelectionChanged: (v) => setState(() => _audience = v.first),
-            showSelectedIcon: false,
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
-          // Subject
-          TextField(
-            controller: _subjectController,
-            decoration: InputDecoration(
-              labelText: l10n.adminNotificationSubject,
-              border: const OutlineInputBorder(),
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
-          // Body
-          TextField(
-            controller: _bodyController,
-            decoration: InputDecoration(
-              labelText: l10n.adminNotificationBody,
-              border: const OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-            maxLines: 5,
-          ),
-
-          const SizedBox(height: AppSpacing.md),
-
-          // Send button
-          SizedBox(
-            width: double.infinity,
-            height: AppSpacing.buttonHeight,
-            child: FilledButton(
-              onPressed: _isSending ? null : _send,
+        child: Row(
+          children: [
+            Icon(icon, color: theme.colorScheme.primary, size: 22),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
               child: Text(
-                _isSending
-                    ? l10n.adminNotificationSending
-                    : l10n.adminNotificationSend,
+                title,
+                style: theme.textTheme.bodyLarge,
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Stat Card ──────────────────────────────────────
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.cardPadding),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withOpacity( 0.2)
-                : AppColors.lightDivider.withOpacity( 0.5),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            value,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
+            Icon(
+              Icons.chevron_right,
               color: theme.colorScheme.onSurfaceVariant,
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── User Tile ──────────────────────────────────────
-
-class _UserTile extends StatelessWidget {
-  const _UserTile({required this.user});
-
-  final Map<String, dynamic> user;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-
-    final displayName = user['display_name'] as String? ?? '';
-    final isPremium = user['is_premium'] as bool? ?? false;
-    final isAdmin = user['is_admin'] as bool? ?? false;
-    final id = user['id'] as String? ?? '';
-    final createdAt = user['created_at'] as String? ?? '';
-
-    // Format date
-    String dateLabel = '';
-    if (createdAt.isNotEmpty) {
-      try {
-        final dt = DateTime.parse(createdAt);
-        dateLabel = '${dt.day.toString().padLeft(2, '0')}.'
-            '${dt.month.toString().padLeft(2, '0')}.'
-            '${dt.year}';
-      } catch (_) {}
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(
-        children: [
-          // Name or truncated ID
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName.isNotEmpty
-                      ? displayName
-                      : id.length > 8
-                          ? '${id.substring(0, 8)}...'
-                          : id,
-                  style: theme.textTheme.bodyMedium,
-                ),
-                if (dateLabel.isNotEmpty)
-                  Text(
-                    dateLabel,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          // Badges
-          if (isAdmin)
-            _Badge(
-              label: l10n.adminAdminBadge,
-              color: theme.colorScheme.primary,
-            ),
-          if (isPremium)
-            Padding(
-              padding: const EdgeInsets.only(left: AppSpacing.xs),
-              child: _Badge(
-                label: l10n.adminPremiumBadge,
-                color: theme.colorScheme.tertiary,
-              ),
-            ),
-          if (!isPremium && !isAdmin)
-            _Badge(
-              label: l10n.adminFreeBadge,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Reflection Tile ────────────────────────────────
-
-class _ReflectionTile extends StatelessWidget {
-  const _ReflectionTile({required this.reflection});
-
-  final Map<String, dynamic> reflection;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final id = reflection['id'] as String? ?? '';
-    final userId = reflection['user_id'] as String? ?? '';
-    final weekStart = reflection['week_start'] as String? ?? '';
-    final content = reflection['content'] as String? ?? '';
-    final createdAt = reflection['created_at'] as String? ?? '';
-    final isArchived = reflection['is_archived'] as bool? ?? false;
-
-    // Count sentences (rough: split by period)
-    final sentenceCount =
-        content.isNotEmpty ? content.split(RegExp(r'[.!?]+')).where((s) => s.trim().isNotEmpty).length : 0;
-
-    String formatDate(String raw) {
-      if (raw.isEmpty) return '-';
-      try {
-        final dt = DateTime.parse(raw);
-        return '${dt.day.toString().padLeft(2, '0')}.'
-            '${dt.month.toString().padLeft(2, '0')}.'
-            '${dt.year}';
-      } catch (_) {
-        return raw;
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row 1: reflection_id (truncated) + archived badge
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: id));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('ID copied'),
-                        behavior: SnackBarBehavior.floating,
-                        duration: Duration(seconds: 1),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    'ID: ${id.length > 8 ? '${id.substring(0, 8)}...' : id}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ),
-              if (isArchived)
-                _Badge(
-                  label: 'Archived',
-                  color: theme.colorScheme.tertiary,
-                ),
-            ],
-          ),
-          const SizedBox(height: 2),
-
-          // Row 2: user_id
-          Text(
-            'user: ${userId.length > 8 ? '${userId.substring(0, 8)}...' : userId}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontFamily: 'monospace',
-              fontSize: 11,
-            ),
-          ),
-          const SizedBox(height: 2),
-
-          // Row 3: week_start + sentence_count + created_at
-          Text(
-            'week: ${formatDate(weekStart)}  |  sentences: $sentenceCount  |  ${formatDate(createdAt)}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Badge ──────────────────────────────────────────
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        border: Border.all(color: color.withOpacity( 0.5)),
-        borderRadius: BorderRadius.circular(AppSpacing.xs),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: color,
-              fontSize: 11,
-            ),
+          ],
+        ),
       ),
     );
   }

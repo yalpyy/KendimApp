@@ -212,6 +212,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signIn(String email, String password) async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _isLoading = true);
     try {
       final user = await ref.read(authServiceProvider).signIn(email, password);
@@ -222,7 +223,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       debugPrint('[LoginScreen] Sign-in error: $e');
-      _showError('$e');
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('invalid') ||
+          errorStr.contains('credentials') ||
+          errorStr.contains('password') ||
+          errorStr.contains('not found')) {
+        _showError(l10n.loginInvalidCredentials);
+      } else {
+        _showError(l10n.genericError);
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -250,7 +259,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       debugPrint('[LoginScreen] Sign-up error: $e');
-      _showError('$e');
+      _showError(AppLocalizations.of(context).genericError);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

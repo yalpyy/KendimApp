@@ -224,10 +224,24 @@ class AuthDatasource {
     }
   }
 
+  /// Updates the display name for the current user.
+  Future<void> updateDisplayName(String userId, String newName) async {
+    try {
+      await _client.from('users').update({
+        'display_name': newName,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+
+      await _auth.updateUser(UserAttributes(data: {'display_name': newName}));
+    } catch (e) {
+      throw AuthException('Failed to update display name: $e');
+    }
+  }
+
   // ─── Admin queries ─────────────────────────────────
 
-  /// Returns basic app statistics for the admin panel.
-  Future<Map<String, int>> getAdminStats() async {
+  /// Returns extended app statistics for the admin panel.
+  Future<Map<String, dynamic>> getAdminStats() async {
     try {
       final users = await _client.from('users').select('id');
       final premiumUsers =
@@ -236,14 +250,99 @@ class AuthDatasource {
       final reflections =
           await _client.from('weekly_reflections').select('id');
 
+      // Top 10 users by reflection count
+      final topReflectionUsers = await _client
+          .from('weekly_reflections')
+          .select('user_id')
+          .order('created_at', ascending: false);
+
+      // Top 10 users by entry count (streak proxy)
+      final topEntryUsers = await _client
+          .from('entries')
+          .select('user_id')
+          .order('created_at', ascending: false);
+
+      // Count reflections per user
+      final reflectionCounts = <String, int>{};
+      for (final r in topReflectionUsers as List) {
+        final uid = r['user_id'] as String;
+        reflectionCounts[uid] = (reflectionCounts[uid] ?? 0) + 1;
+      }
+      final sortedReflections = reflectionCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      // Count entries per user
+      final entryCounts = <String, int>{};
+      for (final e in topEntryUsers as List) {
+        final uid = e['user_id'] as String;
+        entryCounts[uid] = (entryCounts[uid] ?? 0) + 1;
+      }
+      final sortedEntries = entryCounts.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      // Fetch display names for top users
+      final topUserIds = <String>{
+        ...sortedReflections.take(10).map((e) => e.key),
+        ...sortedEntries.take(10).map((e) => e.key),
+      };
+      final userNames = <String, String>{};
+      if (topUserIds.isNotEmpty) {
+        final userData = await _client
+            .from('users')
+            .select('id, display_name')
+            .inFilter('id', topUserIds.toList());
+        for (final u in userData as List) {
+          userNames[u['id'] as String] = (u['display_name'] as String?) ?? '';
+        }
+      }
+
       return {
         'total_users': (users as List).length,
         'premium_users': (premiumUsers as List).length,
+        'free_users': (users).length - (premiumUsers).length,
         'total_entries': (entries as List).length,
         'total_reflections': (reflections as List).length,
+        'top_reflections': sortedReflections
+            .take(10)
+            .map((e) => {
+                  'user_id': e.key,
+                  'display_name': userNames[e.key] ?? '',
+                  'count': e.value,
+                })
+            .toList(),
+        'top_streaks': sortedEntries
+            .take(10)
+            .map((e) => {
+                  'user_id': e.key,
+                  'display_name': userNames[e.key] ?? '',
+                  'count': e.value,
+                })
+            .toList(),
       };
     } catch (e) {
       throw AuthException('Failed to fetch admin stats: $e');
+    }
+  }
+
+  /// Returns a paginated list of users with optional search.
+  Future<List<Map<String, dynamic>>> getUsers({
+    int page = 0,
+    int pageSize = 10,
+    String? search,
+  }) async {
+    try {
+      var query = _client.from('users').select();
+
+      if (search != null && search.isNotEmpty) {
+        query = query.or('display_name.ilike.%$search%,id.ilike.%$search%');
+      }
+
+      final data = await query
+          .order('created_at', ascending: false)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      throw AuthException('Failed to fetch users: $e');
     }
   }
 
@@ -260,6 +359,23 @@ class AuthDatasource {
     }
   }
 
+  /// Returns paginated reflections (for admin debug view).
+  Future<List<Map<String, dynamic>>> getReflections({
+    int page = 0,
+    int pageSize = 10,
+  }) async {
+    try {
+      final data = await _client
+          .from('weekly_reflections')
+          .select()
+          .order('created_at', ascending: false)
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+      return List<Map<String, dynamic>>.from(data);
+    } catch (e) {
+      throw AuthException('Failed to fetch reflections: $e');
+    }
+  }
+
   /// Returns all reflections (for admin debug view).
   Future<List<Map<String, dynamic>>> getAllReflections() async {
     try {
@@ -270,6 +386,33 @@ class AuthDatasource {
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       throw AuthException('Failed to fetch reflections: $e');
+    }
+  }
+
+  /// Grants premium to a user until the given date.
+  Future<void> grantPremium(String userId, DateTime until) async {
+    try {
+      await _client.from('users').update({
+        'is_premium': true,
+        'premium_started_at': DateTime.now().toIso8601String(),
+        'premium_expires_at': until.toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+    } catch (e) {
+      throw AuthException('Failed to grant premium: $e');
+    }
+  }
+
+  /// Revokes premium from a user.
+  Future<void> revokePremium(String userId) async {
+    try {
+      await _client.from('users').update({
+        'is_premium': false,
+        'premium_expires_at': null,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId);
+    } catch (e) {
+      throw AuthException('Failed to revoke premium: $e');
     }
   }
 

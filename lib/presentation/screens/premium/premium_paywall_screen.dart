@@ -5,6 +5,7 @@ import 'package:kendin/core/l10n/app_localizations.dart';
 import 'package:kendin/core/theme/app_colors.dart';
 import 'package:kendin/core/theme/app_spacing.dart';
 import 'package:kendin/core/utils/date_utils.dart';
+import 'package:kendin/domain/entities/user_entity.dart';
 import 'package:kendin/domain/entities/weekly_reflection_entity.dart';
 import 'package:kendin/presentation/providers/providers.dart';
 import 'package:kendin/presentation/screens/auth/login_screen.dart';
@@ -29,11 +30,12 @@ class _PremiumPaywallScreenState extends ConsumerState<PremiumPaywallScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider).valueOrNull;
     final isPremium = user?.isPremium ?? false;
+    final isExpired = user?.membershipStatus == MembershipStatus.expired;
 
     return Scaffold(
       body: SafeArea(
-        child: isPremium
-            ? _PremiumTimeline(userId: user!.id)
+        child: (isPremium || isExpired)
+            ? _PremiumTimeline(userId: user!.id, isExpired: isExpired)
             : _FreePaywall(
                 isLoading: _isLoading,
                 onPurchase: (plan) => _purchase(plan),
@@ -274,17 +276,26 @@ class _PlanButton extends StatelessWidget {
 
 // ─── Premium User Timeline ─────────────────────────
 
-class _PremiumTimeline extends ConsumerWidget {
-  const _PremiumTimeline({required this.userId});
+class _PremiumTimeline extends ConsumerStatefulWidget {
+  const _PremiumTimeline({required this.userId, this.isExpired = false});
   final String userId;
+  final bool isExpired;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_PremiumTimeline> createState() => _PremiumTimelineState();
+}
+
+class _PremiumTimelineState extends ConsumerState<_PremiumTimeline> {
+  static const _pageSize = 10;
+  int _currentPage = 0;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     final currentAsync = ref.watch(currentReflectionProvider);
-    final archivedAsync = ref.watch(_archivedReflectionsProvider(userId));
+    final archivedAsync = ref.watch(_archivedReflectionsProvider(widget.userId));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,6 +320,55 @@ class _PremiumTimeline extends ConsumerWidget {
             ],
           ),
         ),
+
+        // Expired banner
+        if (widget.isExpired) ...[
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenHorizontal,
+            ),
+            padding: const EdgeInsets.all(AppSpacing.cardPadding),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  l10n.premiumExpiredBanner,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  l10n.premiumExpiredRenew,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  height: 36,
+                  child: FilledButton(
+                    onPressed: () {
+                      // Navigate to free paywall to renew
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => const PremiumPaywallScreen(),
+                        ),
+                      );
+                    },
+                    child: Text(l10n.premiumRenewButton),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         const SizedBox(height: AppSpacing.lg),
         Expanded(
           child: archivedAsync.when(
@@ -333,19 +393,61 @@ class _PremiumTimeline extends ConsumerWidget {
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.screenHorizontal,
-                ),
-                itemCount: all.length,
-                itemBuilder: (context, index) {
-                  final reflection = all[index];
-                  return _TimelineItem(
-                    reflection: reflection,
-                    isLast: index == all.length - 1,
-                    onTap: () => _showReflectionModal(context, reflection),
-                  );
-                },
+              // Paginate
+              final totalPages = (all.length / _pageSize).ceil();
+              final start = _currentPage * _pageSize;
+              final end = (start + _pageSize).clamp(0, all.length);
+              final pageItems = all.sublist(start, end);
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenHorizontal,
+                      ),
+                      itemCount: pageItems.length,
+                      itemBuilder: (context, index) {
+                        final reflection = pageItems[index];
+                        return _TimelineItem(
+                          reflection: reflection,
+                          isLast: index == pageItems.length - 1,
+                          onTap: () =>
+                              _showReflectionModal(context, reflection),
+                        );
+                      },
+                    ),
+                  ),
+                  if (totalPages > 1)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.chevron_left),
+                            onPressed: _currentPage > 0
+                                ? () =>
+                                    setState(() => _currentPage--)
+                                : null,
+                          ),
+                          Text(
+                            '${_currentPage + 1} / $totalPages',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chevron_right),
+                            onPressed: _currentPage < totalPages - 1
+                                ? () =>
+                                    setState(() => _currentPage++)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),

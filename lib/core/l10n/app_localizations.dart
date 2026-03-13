@@ -227,6 +227,50 @@ class AppLocalizations {
       'menu_debug_metadata': 'Kullanıcı Metadata',
       'menu_debug_no_session': 'Oturum yok',
 
+      // Premium expired banner
+      'premium_expired_banner': 'Üyeliğinizin süresi dolmuş.',
+      'premium_expired_renew': 'Devam ettirmek ister misiniz?',
+      'premium_renew_button': 'Üyeliği Yenile',
+
+      // Profile edit
+      'profile_edit_name': 'Kullanıcı adını değiştir',
+      'profile_name_hint': 'Yeni kullanıcı adı',
+      'profile_name_saved': 'Kullanıcı adı güncellendi.',
+      'profile_save': 'Kaydet',
+
+      // Login errors
+      'login_invalid_credentials': 'E-posta veya şifre yanlış.',
+
+      // Admin tabs
+      'admin_tab_stats': 'İstatistikler',
+      'admin_tab_users': 'Kullanıcılar',
+      'admin_tab_notifications': 'Bildirimler',
+      'admin_tab_reflections': 'Yansımalar',
+
+      // Admin user management
+      'admin_search_users': 'Kullanıcı ara...',
+      'admin_grant_premium': 'Premium Ver',
+      'admin_revoke_premium': 'Premium Kaldır',
+      'admin_premium_until': 'Premium Bitiş',
+      'admin_set_premium_date': 'Premium bitiş tarihi seçin',
+      'admin_premium_granted': 'Premium verildi.',
+      'admin_premium_revoked': 'Premium kaldırıldı.',
+      'admin_confirm': 'Onayla',
+
+      // Admin extended stats
+      'admin_free_users': 'Ücretsiz Kullanıcı',
+      'admin_top_reflections': 'En Çok Yansıma',
+      'admin_top_streaks': 'En Çok Strike',
+      'admin_reflections_count': 'yansıma',
+      'admin_entries_count': 'yazı',
+
+      // Admin notification type
+      'admin_notification_type': 'Bildirim Türü',
+      'admin_notification_type_email': 'E-posta',
+      'admin_notification_type_push': 'Push Bildirim',
+      'admin_push_title': 'Bildirim Başlığı',
+      'admin_push_not_configured': 'Push bildirim henüz yapılandırılmadı.',
+
       // Errors
       'generic_error': 'Bir şeyler ters gitti. Tekrar dene.',
       'email_required': 'E-posta gerekli.',
@@ -438,6 +482,50 @@ class AppLocalizations {
       'menu_debug_metadata': 'User Metadata',
       'menu_debug_no_session': 'No session',
 
+      // Premium expired banner
+      'premium_expired_banner': 'Your subscription has expired.',
+      'premium_expired_renew': 'Would you like to renew?',
+      'premium_renew_button': 'Renew Subscription',
+
+      // Profile edit
+      'profile_edit_name': 'Change username',
+      'profile_name_hint': 'New username',
+      'profile_name_saved': 'Username updated.',
+      'profile_save': 'Save',
+
+      // Login errors
+      'login_invalid_credentials': 'Email or password is incorrect.',
+
+      // Admin tabs
+      'admin_tab_stats': 'Statistics',
+      'admin_tab_users': 'Users',
+      'admin_tab_notifications': 'Notifications',
+      'admin_tab_reflections': 'Reflections',
+
+      // Admin user management
+      'admin_search_users': 'Search users...',
+      'admin_grant_premium': 'Grant Premium',
+      'admin_revoke_premium': 'Revoke Premium',
+      'admin_premium_until': 'Premium Until',
+      'admin_set_premium_date': 'Select premium end date',
+      'admin_premium_granted': 'Premium granted.',
+      'admin_premium_revoked': 'Premium revoked.',
+      'admin_confirm': 'Confirm',
+
+      // Admin extended stats
+      'admin_free_users': 'Free Users',
+      'admin_top_reflections': 'Top Reflections',
+      'admin_top_streaks': 'Top Streaks',
+      'admin_reflections_count': 'reflections',
+      'admin_entries_count': 'entries',
+
+      // Admin notification type
+      'admin_notification_type': 'Notification Type',
+      'admin_notification_type_email': 'Email',
+      'admin_notification_type_push': 'Push Notification',
+      'admin_push_title': 'Notification Title',
+      'admin_push_not_configured': 'Push notifications not yet configured.',
+
       // Errors
       'generic_error': 'Something went wrong. Try again.',
       'email_required': 'Email is required.',
@@ -631,6 +719,50 @@ class AppLocalizations {
   String get menuDebugTokenExpiry => _get('menu_debug_token_expiry');
   String get menuDebugMetadata => _get('menu_debug_metadata');
   String get menuDebugNoSession => _get('menu_debug_no_session');
+
+  // Premium expired banner
+  String get premiumExpiredBanner => _get('premium_expired_banner');
+  String get premiumExpiredRenew => _get('premium_expired_renew');
+  String get premiumRenewButton => _get('premium_renew_button');
+
+  // Profile edit
+  String get profileEditName => _get('profile_edit_name');
+  String get profileNameHint => _get('profile_name_hint');
+  String get profileNameSaved => _get('profile_name_saved');
+  String get profileSave => _get('profile_save');
+
+  // Login errors
+  String get loginInvalidCredentials => _get('login_invalid_credentials');
+
+  // Admin tabs
+  String get adminTabStats => _get('admin_tab_stats');
+  String get adminTabUsers => _get('admin_tab_users');
+  String get adminTabNotifications => _get('admin_tab_notifications');
+  String get adminTabReflections => _get('admin_tab_reflections');
+
+  // Admin user management
+  String get adminSearchUsers => _get('admin_search_users');
+  String get adminGrantPremium => _get('admin_grant_premium');
+  String get adminRevokePremium => _get('admin_revoke_premium');
+  String get adminPremiumUntil => _get('admin_premium_until');
+  String get adminSetPremiumDate => _get('admin_set_premium_date');
+  String get adminPremiumGranted => _get('admin_premium_granted');
+  String get adminPremiumRevoked => _get('admin_premium_revoked');
+  String get adminConfirm => _get('admin_confirm');
+
+  // Admin extended stats
+  String get adminFreeUsers => _get('admin_free_users');
+  String get adminTopReflections => _get('admin_top_reflections');
+  String get adminTopStreaks => _get('admin_top_streaks');
+  String get adminReflectionsCount => _get('admin_reflections_count');
+  String get adminEntriesCount => _get('admin_entries_count');
+
+  // Admin notification type
+  String get adminNotificationType => _get('admin_notification_type');
+  String get adminNotificationTypeEmail => _get('admin_notification_type_email');
+  String get adminNotificationTypePush => _get('admin_notification_type_push');
+  String get adminPushTitle => _get('admin_push_title');
+  String get adminPushNotConfigured => _get('admin_push_not_configured');
 
   // Errors
   String get genericError => _get('generic_error');
